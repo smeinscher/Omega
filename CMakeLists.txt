@@ -28,7 +28,9 @@ add_executable(Omega
         src/scenes/main_game_scene.c
         src/scenes/main_game_scene.h
         src/scenes/scene_state.c
-        src/scenes/scene_state.h)
+        src/scenes/scene_state.h
+        src/ui/nuklear_config.c
+        src/ui/nuklear_config.h)
 
 target_link_libraries(Omega
         PRIVATE
