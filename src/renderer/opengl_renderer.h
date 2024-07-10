@@ -12,19 +12,22 @@
 typedef struct BasicVertexData
 {
     unsigned int vao;
-    unsigned int vbos[3];
+    unsigned int vbos[4];
     unsigned int ebo;
     unsigned int count;
     unsigned int dimensions;
     unsigned int indices_count;
+    unsigned int instance_offsets_count;
     float *positions;
     float *uvs;
     float *colors;
+    float *instance_offsets;
     unsigned int *indices;
 } BasicVertexData;
 
 unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions, float *uvs, float *colors,
-                                      unsigned int vertex_count, unsigned int *indices, unsigned int indices_count,
+                                      unsigned int vertex_count, float* instance_offsets, unsigned int instance_offsets_count,
+                                      unsigned int *indices, unsigned int indices_count,
                                       unsigned int dynamic_draw_flag);
 
 unsigned int basic_shader_create(const char *vertex_shader_path, const char *fragment_shader_path);
@@ -32,6 +35,8 @@ unsigned int basic_shader_create(const char *vertex_shader_path, const char *fra
 void basic_draw_arrays(unsigned int vertex_data_id, unsigned int program, unsigned int mode);
 
 void basic_draw_elements(unsigned int vertex_data_id, unsigned int program, unsigned int mode);
+
+void basic_draw_arrays_instanced(unsigned int vertex_data_id, unsigned int program, int instance_count);
 
 void clean_vertex_data(unsigned int vertex_data_id);
 

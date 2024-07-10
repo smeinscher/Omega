@@ -6,27 +6,33 @@ set(CMAKE_C_STANDARD 11)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(cglm CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(imgui CONFIG REQUIRED)
 
 add_executable(Omega
         external/glad/glad.h
         external/glad/glad.c
         external/stb/stb_image.h
         external/stb/stb_image.c
-        main.c
-        renderer/opengl_shader.h
-        renderer/opengl_shader.c
-        renderer/opengl_texture.h
-        renderer/opengl_texture.c
-        renderer/opengl_renderer.c
-        renderer/opengl_renderer.h
-        game/board.c
-        game/board.h)
+        src/main.c
+        src/renderer/opengl_shader.h
+        src/renderer/opengl_shader.c
+        src/renderer/opengl_texture.h
+        src/renderer/opengl_texture.c
+        src/renderer/opengl_renderer.c
+        src/renderer/opengl_renderer.h
+        src/game/board.c
+        src/game/board.h
+        src/renderer/camera.c
+        src/renderer/camera.h
+        src/scenes/main_menu_scene.c
+        src/scenes/main_menu_scene.h
+        src/scenes/main_game_scene.c
+        src/scenes/main_game_scene.h
+        src/scenes/scene_state.c
+        src/scenes/scene_state.h)
 
 target_link_libraries(Omega
         PRIVATE
         cglm::cglm
-        imgui::imgui
         glfw
         ${OPENGL_LIBRARIES}
 )

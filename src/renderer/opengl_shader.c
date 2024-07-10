@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include "../external/glad/glad.h"
+#include "../../external/glad/glad.h"
 
 #include <stdlib.h>
 

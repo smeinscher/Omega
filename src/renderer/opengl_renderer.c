@@ -4,8 +4,8 @@
 
 #include "opengl_renderer.h"
 
+#include "../../external/glad/glad.h"
 #include "opengl_shader.h"
-#include "../external/glad/glad.h"
 
 #include <stdlib.h>
 
@@ -13,8 +13,9 @@ static BasicVertexData g_basic_vertex_data[OMEGA_GAME_MAX_VERTEX_DATA_COUNT];
 static unsigned int g_basic_vertex_data_size = 0;
 
 unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions, float *uvs, float *colors,
-                                      unsigned int vertex_count, unsigned int *indices, unsigned int indices_count,
-                                      unsigned int dynamic_draw_flag)
+                                      unsigned int vertex_count, float *instance_offsets,
+                                      unsigned int instance_offsets_count, unsigned int *indices,
+                                      unsigned int indices_count, unsigned int dynamic_draw_flag)
 {
     if (g_basic_vertex_data_size >= OMEGA_GAME_MAX_VERTEX_DATA_COUNT)
     {
@@ -28,6 +29,8 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
     vertex_data.uvs = uvs;
     vertex_data.colors = colors;
     vertex_data.count = vertex_count;
+    vertex_data.instance_offsets = instance_offsets;
+    vertex_data.instance_offsets_count = instance_offsets_count;
     vertex_data.indices = indices;
     vertex_data.indices_count = indices_count;
     glGenVertexArrays(1, &vertex_data.vao);
@@ -39,6 +42,10 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
     if (colors != NULL)
     {
         glGenBuffers(1, &vertex_data.vbos[2]);
+    }
+    if (instance_offsets != NULL)
+    {
+        glGenBuffers(1, &vertex_data.vbos[3]);
     }
     if (indices_count > 0)
     {
@@ -84,6 +91,17 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
         glEnableVertexAttribArray(2);
     }
 
+    if (instance_offsets != NULL)
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, vertex_data.vbos[3]);
+        glBufferData(GL_ARRAY_BUFFER, vertex_data.instance_offsets_count * vertex_data.dimensions * sizeof(float),
+                     vertex_data.instance_offsets, gl_usage);
+        glVertexAttribPointer(3, vertex_data.dimensions, GL_FLOAT, GL_FALSE, vertex_data.dimensions * sizeof(float),
+                              (void *)0);
+        glEnableVertexAttribArray(3);
+        glVertexAttribDivisor(3, 1);
+    }
+
     if (indices_count > 0)
     {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vertex_data.ebo);
@@ -108,7 +126,7 @@ void basic_draw_arrays(unsigned int vertex_data_id, unsigned int program, unsign
 {
     glUseProgram(program);
     glBindVertexArray(g_basic_vertex_data[vertex_data_id].vao);
-    glDrawElements(mode, g_basic_vertex_data[vertex_data_id].indices_count, GL_UNSIGNED_INT, 0);
+    glDrawArrays(mode, 0, g_basic_vertex_data[vertex_data_id].count * 6);
 }
 
 void basic_draw_elements(unsigned int vertex_data_id, unsigned int program, unsigned int mode)
@@ -119,13 +137,20 @@ void basic_draw_elements(unsigned int vertex_data_id, unsigned int program, unsi
     glDrawElements(mode, g_basic_vertex_data[vertex_data_id].indices_count, GL_UNSIGNED_INT, 0);
 }
 
+void basic_draw_arrays_instanced(unsigned int vertex_data_id, unsigned int program, int instance_count)
+{
+    glUseProgram(program);
+    glBindVertexArray(g_basic_vertex_data[vertex_data_id].vao);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, instance_count);
+}
+
 void clean_vertex_data(unsigned int vertex_data_id)
 {
-    g_basic_vertex_data[vertex_data_id].vao = 0;
-    g_basic_vertex_data[vertex_data_id].vbos[0] = 0;
-    g_basic_vertex_data[vertex_data_id].vbos[1] = 0;
-    g_basic_vertex_data[vertex_data_id].vbos[2] = 0;
-    g_basic_vertex_data[vertex_data_id].ebo = 0;
+    glDeleteVertexArrays(1, &g_basic_vertex_data[vertex_data_id].vao);
+    glDeleteBuffers(1, &g_basic_vertex_data[vertex_data_id].vbos[0]);
+    glDeleteBuffers(1, &g_basic_vertex_data[vertex_data_id].vbos[1]);
+    glDeleteBuffers(1, &g_basic_vertex_data[vertex_data_id].vbos[2]);
+    glDeleteBuffers(1, &g_basic_vertex_data[vertex_data_id].ebo);
     g_basic_vertex_data[vertex_data_id].count = 0;
     g_basic_vertex_data[vertex_data_id].dimensions = 0;
     free(g_basic_vertex_data[vertex_data_id].positions);

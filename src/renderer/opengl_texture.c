@@ -4,8 +4,8 @@
 
 #include "opengl_texture.h"
 
-#include "../external/glad/glad.h"
-#include "../external/stb/stb_image.h"
+#include "../../external/glad/glad.h"
+#include "../../external/stb/stb_image.h"
 
 unsigned int generate_opengl_texture(const char *path)
 {
