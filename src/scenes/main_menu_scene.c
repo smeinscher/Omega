@@ -7,11 +7,8 @@
 #include "../ui/nuklear_config.h"
 #include "scene_state.h"
 
-static GLFWwindow *g_main_window = NULL;
-
-void main_menu_scene_init(GLFWwindow *main_window)
+void main_menu_scene_init()
 {
-    g_main_window = main_window;
 }
 
 void main_menu_scene_update()
@@ -27,7 +24,7 @@ void main_menu_scene_render()
         nk_layout_row_static(ctx, 60, 200, 1);
         if (nk_button_label(ctx, "New Game"))
         {
-            scene_set(MAIN_GAME, g_main_window);
+            scene_set(MAIN_GAME);
         }
     }
     omega_nuklear_end();

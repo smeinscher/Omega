@@ -25,8 +25,13 @@ typedef struct BasicVertexData
     unsigned int *indices;
 } BasicVertexData;
 
+int opengl_glad_init();
+
+void opengl_enable_default_attributes();
+
 unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions, float *uvs, float *colors,
-                                      unsigned int vertex_count, float* instance_offsets, unsigned int instance_offsets_count,
+                                      unsigned int vertex_count, float *instance_offsets,
+                                      unsigned int instance_offsets_count,
                                       unsigned int *indices, unsigned int indices_count,
                                       unsigned int dynamic_draw_flag);
 

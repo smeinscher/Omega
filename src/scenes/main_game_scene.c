@@ -9,9 +9,9 @@
 #include "../renderer/opengl_shader.h"
 #include "../renderer/opengl_texture.h"
 #include "scene_state.h"
-#include <stdbool.h>
+#include "../platform/platform.h"
 
-static GLFWwindow *g_main_window = NULL;
+#include <stdbool.h>
 
 static Board *current_board = NULL;
 
@@ -35,7 +35,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             board_update_hovered_tile(current_board, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f);
             // glfwSetWindowShouldClose(window, true);
-            scene_set(MAIN_MENU, g_main_window);
+            scene_set(MAIN_MENU);
         }
         break;
     }
@@ -132,15 +132,11 @@ void main_game_scene_glfw_scroll_callback(GLFWwindow *window, double xoffset, do
     }
 }
 
-void main_game_scene_init(GLFWwindow *main_window)
+void main_game_scene_init()
 {
-    g_main_window = main_window;
-    glfwSetFramebufferSizeCallback(main_window, main_game_scene_glfw_framebuffer_size_callback);
-    glfwSetKeyCallback(main_window, main_game_scene_glfw_key_callback);
-    glfwSetCursorPosCallback(main_window, main_game_scene_glfw_cursor_position_callback);
-    glfwSetMouseButtonCallback(main_window, main_game_scene_glfw_mouse_button_callback);
-    glfwSetScrollCallback(main_window, main_game_scene_glfw_scroll_callback);
-
+    platform_set_callbacks(main_game_scene_glfw_framebuffer_size_callback, main_game_scene_glfw_key_callback,
+                           main_game_scene_glfw_cursor_position_callback, main_game_scene_glfw_mouse_button_callback,
+                           main_game_scene_glfw_scroll_callback);
     Board *board = board_create(21, 21);
     board_outline_program =
         basic_shader_create("resources/shaders/board_outline.vert", "resources/shaders/board_outline.frag");

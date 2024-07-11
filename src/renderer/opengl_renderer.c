@@ -8,9 +8,30 @@
 #include "opengl_shader.h"
 
 #include <stdlib.h>
+#include <GLFW/glfw3.h>
 
 static BasicVertexData g_basic_vertex_data[OMEGA_GAME_MAX_VERTEX_DATA_COUNT];
 static unsigned int g_basic_vertex_data_size = 0;
+
+int opengl_glad_init()
+{
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        // TODO: logging stuff
+        printf("Error: failed to initiate glad");
+        return -1;
+    }
+    return 0;
+}
+
+void opengl_enable_default_attributes()
+{
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glEnable(GL_LINE_WIDTH);
+    glLineWidth(1.0f);
+}
 
 unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions, float *uvs, float *colors,
                                       unsigned int vertex_count, float *instance_offsets,

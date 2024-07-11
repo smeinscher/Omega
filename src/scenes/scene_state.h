@@ -19,6 +19,6 @@ void scene_update();
 
 void scene_render();
 
-void scene_set(SceneState new_scene_state, GLFWwindow *main_window);
+void scene_set(SceneState new_scene_state);
 
 #endif // OMEGA_SCENE_STATE_H

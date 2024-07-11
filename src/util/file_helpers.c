@@ -1,11 +1,11 @@
 //
-// Created by sterling on 7/10/24.
+// Created by sterling on 7/11/24.
 //
 
-#include "platform.h"
-#include <malloc.h>
-#include <memory.h>
+#include "file_helpers.h"
+
 #include <stdio.h>
+#include <stdlib.h>
 
 char *read_file(const char *file_path, long *file_size)
 {

@@ -33,10 +33,14 @@ add_library(OmegaApp SHARED
         src/scenes/scene_state.h
         src/ui/nuklear_config.c
         src/ui/nuklear_config.h
-        src/game.c
-        src/game.h
-        src/platform/platform.c
-        src/platform/platform.h)
+        src/game/game.c
+        src/game/game.h
+        src/platform/glfw_platform.c
+        src/platform/platform.h
+        src/util/file_helpers.c
+        src/util/file_helpers.h
+        src/game/loader.c
+        src/game/loader.h)
 
 target_link_libraries(OmegaApp
         PRIVATE

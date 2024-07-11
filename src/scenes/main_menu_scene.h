@@ -8,7 +8,7 @@
 #include "../../external/glad/glad.h"
 #include <GLFW/glfw3.h>
 
-void main_menu_scene_init(GLFWwindow *main_window);
+void main_menu_scene_init();
 
 void main_menu_scene_update();
 
