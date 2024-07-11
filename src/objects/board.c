@@ -138,6 +138,7 @@ Board *board_create(int dimension_x, int dimension_y)
     board->board_outline_vertices = board_vertices_create(dimension_x, dimension_y, 0, 0);
     board->board_outline_indices = board_outline_indices_create(dimension_x, dimension_y);
 
+    board->board_border_positions = malloc(sizeof(float) * 12);
     board->board_border_positions[0] = 0.0f;
     board->board_border_positions[1] = BOARD_HEX_TILE_HEIGHT;
     board->board_border_positions[2] = BOARD_HEX_TILE_WIDTH;
@@ -151,6 +152,7 @@ Board *board_create(int dimension_x, int dimension_y)
     board->board_border_positions[10] = BOARD_HEX_TILE_WIDTH;
     board->board_border_positions[11] = BOARD_HEX_TILE_HEIGHT;
 
+    board->board_border_uvs = malloc(sizeof(float) * 12);
     board->board_border_uvs[0] = 0.0f;
     board->board_border_uvs[1] = 1.0f;
     board->board_border_uvs[2] = 1.0f;
@@ -164,6 +166,7 @@ Board *board_create(int dimension_x, int dimension_y)
     board->board_border_uvs[10] = 1.0f;
     board->board_border_uvs[11] = 1.0f;
 
+    board->board_border_colors = malloc(sizeof(float) * 24);
     for (int i = 0; i < 6; i++)
     {
         board->board_border_colors[i * 4] = 0.7f;

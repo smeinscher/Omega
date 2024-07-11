@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
-project(Omega C)
+project(OmegaCradle C)
+project(OmegaApp C)
 
 set(CMAKE_C_STANDARD 11)
 
@@ -7,7 +8,8 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(cglm CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 
-add_executable(Omega
+add_executable(OmegaCradle src/main.c)
+add_library(OmegaApp SHARED
         external/glad/glad.h
         external/glad/glad.c
         external/stb/stb_image.h
@@ -19,8 +21,8 @@ add_executable(Omega
         src/renderer/opengl_texture.c
         src/renderer/opengl_renderer.c
         src/renderer/opengl_renderer.h
-        src/game/board.c
-        src/game/board.h
+        src/objects/board.c
+        src/objects/board.h
         src/renderer/camera.c
         src/renderer/camera.h
         src/scenes/main_menu_scene.c
@@ -30,18 +32,27 @@ add_executable(Omega
         src/scenes/scene_state.c
         src/scenes/scene_state.h
         src/ui/nuklear_config.c
-        src/ui/nuklear_config.h)
+        src/ui/nuklear_config.h
+        src/game.c
+        src/game.h
+        src/platform/platform.c
+        src/platform/platform.h)
 
-target_link_libraries(Omega
+target_link_libraries(OmegaApp
         PRIVATE
         cglm::cglm
         glfw
         ${OPENGL_LIBRARIES}
 )
 
+target_link_libraries(OmegaCradle
+        PRIVATE
+        glfw
+        OmegaApp)
+
 add_custom_target(copy_resources
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/resources
         ${CMAKE_CURRENT_BINARY_DIR}/resources
 )
 
-add_dependencies(Omega copy_resources)
+add_dependencies(OmegaApp copy_resources)

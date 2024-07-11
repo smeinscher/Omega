@@ -3,12 +3,11 @@
 //
 
 #include "main_menu_scene.h"
-#include "scene_state.h"
-#include "../ui/nuklear_config.h"
 #include "../../external/nuklear/nuklear.h"
+#include "../ui/nuklear_config.h"
+#include "scene_state.h"
 
-GLFWwindow *g_main_window = NULL;
-
+static GLFWwindow *g_main_window = NULL;
 
 void main_menu_scene_init(GLFWwindow *main_window)
 {
@@ -29,7 +28,6 @@ void main_menu_scene_render()
         if (nk_button_label(ctx, "New Game"))
         {
             scene_set(MAIN_GAME, g_main_window);
-            return;
         }
     }
     omega_nuklear_end();

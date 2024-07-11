@@ -28,9 +28,9 @@ typedef struct Board
     float *board_outline_vertices;
     unsigned int *board_outline_indices;
     float *board_tile_offsets;
-    float board_border_positions[12];
-    float board_border_uvs[12];
-    float board_border_colors[24];
+    float *board_border_positions;
+    float *board_border_uvs;
+    float *board_border_colors;
 } Board;
 
 Board *board_create(int dimension_x, int dimension_y);

@@ -3,20 +3,23 @@
 //
 
 #include "main_game_scene.h"
-#include "../game/board.h"
+#include "../objects/board.h"
 #include "../renderer/camera.h"
 #include "../renderer/opengl_renderer.h"
 #include "../renderer/opengl_shader.h"
 #include "../renderer/opengl_texture.h"
+#include "scene_state.h"
 #include <stdbool.h>
 
-Board *current_board = NULL;
+static GLFWwindow *g_main_window = NULL;
 
-unsigned int board_outline_program = 0;
-unsigned int board_outline_id = 0;
-unsigned int board_borders_program = 0;
-unsigned int board_borders_id = 0;
-unsigned int board_texture = 0;
+static Board *current_board = NULL;
+
+static unsigned int board_outline_program = 0;
+static unsigned int board_outline_id = 0;
+static unsigned int board_borders_program = 0;
+static unsigned int board_borders_id = 0;
+static unsigned int board_texture = 0;
 
 void main_game_scene_glfw_framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
@@ -31,7 +34,8 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         if (action == GLFW_PRESS)
         {
             board_update_hovered_tile(current_board, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f);
-            glfwSetWindowShouldClose(window, true);
+            // glfwSetWindowShouldClose(window, true);
+            scene_set(MAIN_MENU, g_main_window);
         }
         break;
     }
@@ -122,14 +126,15 @@ void main_game_scene_glfw_scroll_callback(GLFWwindow *window, double xoffset, do
     {
         camera_set_zoom(55.0f);
     }
-    else if (camera_get_zoom() > 125.0f)
+    else if (camera_get_zoom() > 155.0f)
     {
-        camera_set_zoom(125.0f);
+        camera_set_zoom(155.0f);
     }
 }
 
 void main_game_scene_init(GLFWwindow *main_window)
 {
+    g_main_window = main_window;
     glfwSetFramebufferSizeCallback(main_window, main_game_scene_glfw_framebuffer_size_callback);
     glfwSetKeyCallback(main_window, main_game_scene_glfw_key_callback);
     glfwSetCursorPosCallback(main_window, main_game_scene_glfw_cursor_position_callback);
@@ -171,6 +176,7 @@ void main_game_scene_render()
 
 void main_game_scene_clean()
 {
+    clean_all_vertex_data();
     glDeleteProgram(board_borders_program);
     glDeleteProgram(board_outline_program);
     free(current_board);

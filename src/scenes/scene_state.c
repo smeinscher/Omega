@@ -8,10 +8,9 @@
 
 #include <stddef.h>
 
-SceneState g_scene_state = MAIN_GAME;
+SceneState g_scene_state;
 
 void (*g_update_func_ptr)(void) = NULL;
-
 void (*g_render_func_ptr)(void) = NULL;
 
 void scene_update()
@@ -24,10 +23,12 @@ void scene_render()
     g_render_func_ptr();
 }
 
-void scene_set(SceneState scene_state, GLFWwindow *main_window)
+void scene_set(SceneState new_scene_state, GLFWwindow *main_window)
 {
     switch (g_scene_state)
     {
+    case INIT:
+        break;
     case MAIN_MENU:
         main_menu_scene_clean();
         break;
@@ -35,8 +36,10 @@ void scene_set(SceneState scene_state, GLFWwindow *main_window)
         main_game_scene_clean();
         break;
     }
-    switch (scene_state)
+    switch (new_scene_state)
     {
+    case INIT:
+        break;
     case MAIN_MENU:
         main_menu_scene_init(main_window);
         g_update_func_ptr = main_menu_scene_update;
@@ -48,5 +51,5 @@ void scene_set(SceneState scene_state, GLFWwindow *main_window)
         g_render_func_ptr = main_game_scene_render;
         break;
     }
-    g_scene_state = scene_state;
+    g_scene_state = new_scene_state;
 }
