@@ -5,4 +5,8 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#endif //LOADER_H
+#include <stdbool.h>
+
+void loading_screen(const bool *done_loading);
+
+#endif // LOADER_H

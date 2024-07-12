@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include "../../external/glad/glad.h"
+#include "../util/file_helpers.h"
 
 #include <stdlib.h>
 
@@ -14,24 +15,29 @@
 
 unsigned int opengl_compile_shader(const char *path, unsigned int type);
 
-unsigned int opengl_load_basic_shaders(const char *vertex_shader_path, const char *fragment_shader_path)
+void opengl_attach_shaders(unsigned int shader_program, unsigned int vertex_shader, unsigned int fragment_shader)
 {
+}
+
+Shader opengl_load_basic_shaders(const char *vertex_shader_path, const char *fragment_shader_path)
+{
+    Shader shader = {0};
     const unsigned int vertex_shader = opengl_compile_shader(vertex_shader_path, GL_VERTEX_SHADER);
     if (vertex_shader == 0)
     {
         // TODO: logging stuff
         printf("Vertex shader failed to compile\n");
-        return -1;
+        return shader;
     }
     const unsigned int fragment_shader = opengl_compile_shader(fragment_shader_path, GL_FRAGMENT_SHADER);
     if (fragment_shader == 0)
     {
         // TODO: logging stuff
         printf("Fragment shader failed to compile");
-        return -1;
+        return shader;
     }
 
-    const unsigned int shader_program = glCreateProgram();
+    unsigned int shader_program = glCreateProgram();
 
     glAttachShader(shader_program, vertex_shader);
     glAttachShader(shader_program, fragment_shader);
@@ -44,7 +50,7 @@ unsigned int opengl_load_basic_shaders(const char *vertex_shader_path, const cha
         char info_log[MAX_LOG_BUFFER_SIZE];
         glGetProgramInfoLog(shader_program, MAX_LOG_BUFFER_SIZE, NULL, info_log);
         // TODO: logging stuff
-        printf("Failed to link program:\n\t%s", info_log);
+        printf("Failed to link shader_program:\n\t%s", info_log);
     }
 
     glDeleteShader(vertex_shader);
@@ -52,7 +58,12 @@ unsigned int opengl_load_basic_shaders(const char *vertex_shader_path, const cha
 
     glUseProgram(shader_program);
 
-    return shader_program;
+    shader.program = shader_program;
+    shader.vertex_shader_path = vertex_shader_path;
+    shader.fragment_shader_path = fragment_shader_path;
+    shader.vertex_shader_last_modified_timestamp = get_file_timestamp(vertex_shader_path);
+    shader.fragment_shader_last_modified_timestamp = get_file_timestamp(fragment_shader_path);
+    return shader;
 }
 
 unsigned int opengl_compile_shader(const char *path, unsigned int type)
@@ -117,4 +128,19 @@ void opengl_set_uniform_mat4(unsigned int program, const char *name, mat4 mat)
 {
     glUseProgram(program);
     glUniformMatrix4fv(glGetUniformLocation(program, name), 1, GL_FALSE, &mat[0][0]);
+}
+
+void opengl_shader_hot_reload(Shader *shader)
+{
+    struct timespec vertex_current_timestamp = get_file_timestamp(shader->vertex_shader_path);
+    struct timespec fragment_current_timestamp = get_file_timestamp(shader->fragment_shader_path);
+
+    if (vertex_current_timestamp.tv_sec > shader->vertex_shader_last_modified_timestamp.tv_sec ||
+        fragment_current_timestamp.tv_sec > shader->fragment_shader_last_modified_timestamp.tv_sec)
+    {
+        // TODO: logging stuff
+        printf("Hot reloading shader!");
+        glDeleteProgram(shader->program);
+        *shader = opengl_load_basic_shaders(shader->vertex_shader_path, shader->fragment_shader_path);
+    }
 }

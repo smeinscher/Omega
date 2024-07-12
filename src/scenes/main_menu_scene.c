@@ -1,11 +1,10 @@
 //
-// Created by sterling on 7/9/24.
-//
 
 #include "main_menu_scene.h"
 #include "../../external/nuklear/nuklear.h"
 #include "../ui/nuklear_config.h"
 #include "scene_state.h"
+#include <stdio.h>
 
 void main_menu_scene_init()
 {

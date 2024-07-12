@@ -6,13 +6,14 @@
 
 #include "../../external/glad/glad.h"
 #include "../ui/nuklear_config.h"
-#include <stdio.h>
 #include <GLFW/glfw3.h>
+#include <stdio.h>
 
 // #define FULLSCREEN_MODE glfwGetPrimaryMonitor()
 #define FULLSCREEN_MODE NULL
 
 static GLFWwindow *g_main_window = NULL;
+static GLFWwindow *g_loading_window = NULL;
 
 void platform_init()
 {
@@ -26,16 +27,46 @@ void platform_init()
 
 int platform_create_window(int width, int height, const char *title)
 {
-    g_main_window = glfwCreateWindow(width, height, title, FULLSCREEN_MODE, NULL);
-    if (g_main_window == NULL)
+    GLFWwindow *window = glfwCreateWindow(width, height, title, FULLSCREEN_MODE, NULL);
+    if (window == NULL)
     {
         // TODO: logging stuff
         printf("Error: failed to create window");
         return -1;
     }
-    glfwMakeContextCurrent(g_main_window);
+    glfwMakeContextCurrent(window);
+
+    if (g_main_window == NULL)
+    {
+        g_main_window = window;
+    }
+    else
+    {
+        g_loading_window = window;
+    }
 
     return 0;
+}
+
+int platform_create_share_window(const char *title)
+{
+    g_loading_window = glfwCreateWindow(0, 0, title, NULL, g_main_window);
+    if (g_loading_window == NULL)
+    {
+        printf("Failed to create window with shared context with main window\n");
+        return -1;
+    }
+    return 0;
+}
+
+void switch_to_main_context()
+{
+    glfwMakeContextCurrent(g_main_window);
+}
+
+void switch_to_loading_context()
+{
+    glfwMakeContextCurrent(g_loading_window);
 }
 
 void platform_set_callbacks(void *framebuffer_size, void *key, void *cursor_pos, void *mouse_button, void *scroll)
@@ -63,6 +94,11 @@ void platform_swap_buffers()
     glfwSwapBuffers(g_main_window);
 }
 
+void platform_swap_buffers_loading()
+{
+    glfwSwapBuffers(g_loading_window);
+}
+
 void platform_poll_events()
 {
     glfwPollEvents();
@@ -71,6 +107,11 @@ void platform_poll_events()
 void platform_destroy_window()
 {
     glfwDestroyWindow(g_main_window);
+}
+
+void platform_destroy_loading_window()
+{
+    glfwDestroyWindow(g_loading_window);
 }
 
 void platform_clean()

@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 char *read_file(const char *file_path, long *file_size)
 {
@@ -58,4 +59,15 @@ int copy_file(const char *file_path, const char *output_file_path)
     fclose(output_file);
     free(data);
     return 0;
+}
+
+struct timespec get_file_timestamp(const char *path)
+{
+    struct stat st = {0};
+    int ierr = stat(path, &st);
+    if (ierr != 0)
+    {
+        printf("Error loading file timestamp\n");
+    }
+    return st.st_mtim;
 }

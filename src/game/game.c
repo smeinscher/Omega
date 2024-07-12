@@ -11,6 +11,10 @@
 
 #include <stdio.h>
 
+#define TIME_PER_UPDATE (1.0 / 60.0)
+static double previous_update_time = 0.0;
+static double lag = 0.0;
+
 int game_init(int width, int height, const char *title)
 {
     platform_init();
@@ -33,9 +37,10 @@ int game_init(int width, int height, const char *title)
     return 0;
 }
 
-#define TIME_PER_UPDATE (1.0 / 60.0)
-double previous_update_time = 0.0;
-double lag = 0.0;
+void game_reload(void *game_dl)
+{
+    scene_refresh_func_ptrs(game_dl);
+}
 
 void game_update()
 {

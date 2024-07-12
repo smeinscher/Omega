@@ -7,8 +7,8 @@
 #include "../../external/glad/glad.h"
 #include "opengl_shader.h"
 
-#include <stdlib.h>
 #include <GLFW/glfw3.h>
+#include <stdlib.h>
 
 static BasicVertexData g_basic_vertex_data[OMEGA_GAME_MAX_VERTEX_DATA_COUNT];
 static unsigned int g_basic_vertex_data_size = 0;
@@ -135,12 +135,6 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
 
     g_basic_vertex_data[g_basic_vertex_data_size] = vertex_data;
     return g_basic_vertex_data_size++;
-}
-
-unsigned int basic_shader_create(const char *vertex_shader_path, const char *fragment_shader_path)
-{
-    unsigned int program = opengl_load_basic_shaders(vertex_shader_path, fragment_shader_path);
-    return program;
 }
 
 void basic_draw_arrays(unsigned int vertex_data_id, unsigned int program, unsigned int mode)

@@ -5,6 +5,17 @@
 #ifndef OPENGL_TEXTURE_H
 #define OPENGL_TEXTURE_H
 
-unsigned int generate_opengl_texture(const char* path);
+#include <bits/types/struct_timespec.h>
 
-#endif //OPENGL_TEXTURE_H
+typedef struct Texture
+{
+    unsigned int id;
+    const char *path;
+    struct timespec last_modified_timestamp;
+} Texture;
+
+Texture generate_opengl_texture(const char *path);
+
+void opengl_texture_hot_reload(Texture *texture);
+
+#endif // OPENGL_TEXTURE_H

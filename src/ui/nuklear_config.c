@@ -16,7 +16,6 @@
 #include "../../external/nuklear/nuklear.h"
 #include "../../external/nuklear/nuklear_glfw_gl3.h"
 
-
 struct nk_glfw g_glfw = {0};
 struct nk_context *g_ctx = NULL;
 
@@ -27,7 +26,6 @@ void omega_nuklear_init(GLFWwindow *main_window)
     struct nk_font_atlas *atlas;
     nk_glfw3_font_stash_begin(&g_glfw, &atlas);
     nk_glfw3_font_stash_end(&g_glfw);
-
 }
 
 void omega_nuklear_set_style(OmegaStyle style)

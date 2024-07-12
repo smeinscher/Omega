@@ -49,10 +49,7 @@ target_link_libraries(OmegaApp
         ${OPENGL_LIBRARIES}
 )
 
-target_link_libraries(OmegaCradle
-        PRIVATE
-        glfw
-        OmegaApp)
+target_link_libraries(OmegaCradle OmegaApp)
 
 add_custom_target(copy_resources
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/resources

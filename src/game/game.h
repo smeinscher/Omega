@@ -8,6 +8,8 @@
 
 int game_init(int width, int height, const char *title);
 
+void game_reload(void *game_dl);
+
 void game_update();
 
 void game_render();

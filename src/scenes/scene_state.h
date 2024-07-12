@@ -15,9 +15,13 @@ typedef enum SceneState
     MAIN_GAME
 } SceneState;
 
+SceneState get_current_scene();
+
 void scene_update();
 
 void scene_render();
+
+void scene_refresh_func_ptrs(void *game_dl);
 
 void scene_set(SceneState new_scene_state);
 
