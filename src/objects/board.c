@@ -120,6 +120,7 @@ unsigned int *board_outline_indices_create(int dimension_x, int dimension_y)
     return board_indices;
 }
 
+// TODO: Error checking for malloc
 Board *board_create(int dimension_x, int dimension_y)
 {
     Board *board;
@@ -132,7 +133,6 @@ Board *board_create(int dimension_x, int dimension_y)
     board->mouse_tile_index_y = -1;
     board->selected_tile_index_x = -1;
     board->selected_tile_index_y = -1;
-    board->selected_tiles = malloc(sizeof(int) * dimension_x * dimension_y);
     board->tile_occupation_status = malloc(sizeof(int) * dimension_x * dimension_y);
 
     board->board_outline_vertices = board_vertices_create(dimension_x, dimension_y, 0, 0);
@@ -190,6 +190,11 @@ Board *board_create(int dimension_x, int dimension_y)
                 (float)i * BOARD_HEX_TILE_HEIGHT + (float)(j % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
         }
     }
+
+    board->selected_tiles = malloc(sizeof(int) * dimension_x * dimension_y);
+    unsigned int num_vertices = dimension_y * dimension_x * 24;
+    board->selected_tiles_vertices = malloc(sizeof(float) * num_vertices);
+    memset(board->selected_tiles_vertices, 0, num_vertices);
     return board;
 }
 
@@ -334,5 +339,60 @@ void board_update_hovered_tile(Board *board, float mouse_pos_x, float mouse_pos_
     {
         board->mouse_tile_index_x = -1;
         board->mouse_tile_index_y = -1;
+    }
+}
+
+void board_add_fill_vertices(const float *board_point_vertices, float *board_fill_vertices, int board_vertices_index,
+                             int start_point, int dimension_x, int dimension_y)
+{
+    if (start_point < 0 || start_point > dimension_y * (dimension_x * 2 + 2) + dimension_x * 2 + 2)
+    {
+        return;
+    }
+    int offset = dimension_x * 2 + 2;
+    offset *= start_point % 4 == 0 ? 2 : -2;
+    start_point = start_point * 2;
+    board_fill_vertices[board_vertices_index] = board_point_vertices[start_point];
+    board_fill_vertices[board_vertices_index + 1] = board_point_vertices[start_point + 1];
+    board_fill_vertices[board_vertices_index + 2] = board_point_vertices[start_point + 2];
+    board_fill_vertices[board_vertices_index + 3] = board_point_vertices[start_point + 3];
+    board_fill_vertices[board_vertices_index + 4] = board_point_vertices[start_point + 4];
+    board_fill_vertices[board_vertices_index + 5] = board_point_vertices[start_point + 5];
+
+    board_fill_vertices[board_vertices_index + 6] = board_point_vertices[start_point];
+    board_fill_vertices[board_vertices_index + 7] = board_point_vertices[start_point + 1];
+    board_fill_vertices[board_vertices_index + 8] = board_point_vertices[start_point + 4];
+    board_fill_vertices[board_vertices_index + 9] = board_point_vertices[start_point + 5];
+    board_fill_vertices[board_vertices_index + 10] = board_point_vertices[start_point + 6];
+    board_fill_vertices[board_vertices_index + 11] = board_point_vertices[start_point + 7];
+
+    board_fill_vertices[board_vertices_index] = board_point_vertices[start_point];
+    board_fill_vertices[board_vertices_index + 1] = board_point_vertices[start_point + 1];
+    board_fill_vertices[board_vertices_index + 2] = board_point_vertices[start_point + 6];
+    board_fill_vertices[board_vertices_index + 3] = board_point_vertices[start_point + 7];
+    board_fill_vertices[board_vertices_index + 4] = board_point_vertices[start_point + offset + 4];
+    board_fill_vertices[board_vertices_index + 5] = board_point_vertices[start_point + offset + 5];
+
+    board_fill_vertices[board_vertices_index] = board_point_vertices[start_point];
+    board_fill_vertices[board_vertices_index + 1] = board_point_vertices[start_point + 1];
+    board_fill_vertices[board_vertices_index + 2] = board_point_vertices[start_point + offset + 4];
+    board_fill_vertices[board_vertices_index + 3] = board_point_vertices[start_point + offset + 5];
+    board_fill_vertices[board_vertices_index + 4] = board_point_vertices[start_point + offset + 2];
+    board_fill_vertices[board_vertices_index + 5] = board_point_vertices[start_point + offset + 3];
+}
+
+void board_update_fill_vertices(Board *board)
+{
+    board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, 0,
+                            coords_to_point(board->selected_tile_index_x, board->selected_tile_index_y,
+                                            board->board_dimension_x, board->board_dimension_y),
+                            board->board_dimension_x, board->board_dimension_y);
+    for (int i = 0; i < 36; i += 2)
+    {
+        int x = board->selected_tiles[i];
+        int y = board->selected_tiles[i + 1];
+        board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, i * 24,
+                                coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
+                                board->board_dimension_x, board->board_dimension_y);
     }
 }

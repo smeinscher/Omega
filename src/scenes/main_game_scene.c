@@ -19,6 +19,8 @@ static Shader board_outline_program = {0};
 static unsigned int board_outline_id = 0;
 static Shader board_borders_program = {0};
 static unsigned int board_borders_id = 0;
+static Shader board_fill_program = {0};
+static unsigned int board_fill_id = 0;
 static Texture board_texture = {0};
 
 void main_game_scene_glfw_framebuffer_size_callback(GLFWwindow *window, int width, int height)
@@ -143,11 +145,17 @@ void main_game_scene_init()
     board_outline_id = basic_vertex_data_create(
         board->board_outline_vertices, 2, NULL, NULL, board->board_dimension_y * (board->board_dimension_x * 2 + 2) * 2,
         NULL, 0, board->board_outline_indices, board->board_dimension_x * board->board_dimension_y * 12, 0);
+
     board_borders_program =
         opengl_load_basic_shaders("resources/shaders/board_borders.vert", "resources/shaders/board_borders.frag");
     board_borders_id = basic_vertex_data_create(board->board_border_positions, 2, board->board_border_uvs,
                                                 board->board_border_colors, 6, board->board_tile_offsets,
                                                 board->board_dimension_x * board->board_dimension_y, NULL, 0, 0);
+
+    board_fill_program =
+        opengl_load_basic_shaders("resources/shaders/board_fill.vert", "resources/shaders/board_fill.frag");
+    board_fill_id =
+        basic_vertex_data_create(board->selected_tiles_vertices, 2, NULL, NULL, 38 * 24, NULL, 0, NULL, 0, 0);
 
     current_board = board;
 
@@ -164,13 +172,18 @@ void main_game_scene_render()
     opengl_texture_hot_reload(&board_texture);
     opengl_shader_hot_reload(&board_outline_program);
     opengl_shader_hot_reload(&board_borders_program);
+    opengl_shader_hot_reload(&board_fill_program);
     glBindTexture(GL_TEXTURE_2D, board_texture.id);
     opengl_set_uniform_mat4(board_borders_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(board_borders_program.program, "projection", (vec4 *)camera_get_projection());
     opengl_set_uniform_mat4(board_outline_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(board_outline_program.program, "projection", (vec4 *)camera_get_projection());
+    opengl_set_uniform_mat4(board_fill_program.program, "view", (vec4 *)camera_get_view());
+    opengl_set_uniform_mat4(board_fill_program.program, "projection", (vec4 *)camera_get_projection());
+    board_update_fill_vertices(current_board);
     basic_draw_elements(board_outline_id, board_outline_program.program, GL_LINES);
     basic_draw_arrays_instanced(board_borders_id, board_borders_program.program, 21 * 21);
+    basic_draw_arrays(board_fill_id, board_fill_program.program, GL_TRIANGLES);
 }
 
 void main_game_scene_clean()

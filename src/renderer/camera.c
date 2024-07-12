@@ -41,6 +41,7 @@ void camera_update()
     {
         velocity[0] += 1.0f;
     }
+    glm_vec3_norm(velocity);
     glm_vec3_scale(velocity, g_camera_speed, velocity);
     glm_vec3_scale(velocity, camera_get_zoom_ratio(), velocity);
     glm_vec3_add(g_camera_position, velocity, g_camera_position);

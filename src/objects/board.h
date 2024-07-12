@@ -23,6 +23,7 @@ typedef struct Board
     int selected_tile_index_y;
 
     int *selected_tiles;
+    float *selected_tiles_vertices;
     int *tile_occupation_status;
 
     float *board_outline_vertices;
@@ -39,5 +40,7 @@ void board_handle_tile_click(Board *board);
 
 void board_update_hovered_tile(Board *board, float mouse_pos_x, float mouse_pos_y, float scale,
                                float adjusted_window_width, float adjusted_window_height);
+
+void board_update_fill_vertices(Board *board);
 
 #endif // BOARD_H
