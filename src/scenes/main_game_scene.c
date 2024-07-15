@@ -98,7 +98,7 @@ void main_game_scene_glfw_cursor_position_callback(GLFWwindow *window, double xp
 {
     vec4 pos_nds;
     vec4 mouse_position = {(float)xpos, (float)ypos, 0.0f, 1.0f};
-    glm_vec4_mul((float *)camera_get_projection(), mouse_position, pos_nds);
+    glm_mat4_mulv((vec4 *)camera_get_projection(), mouse_position, pos_nds);
     float left = (float)camera_get_viewport_width() - (float)camera_get_viewport_width() / camera_get_zoom_ratio();
     float right = (float)camera_get_viewport_width() / camera_get_zoom_ratio();
     float bottom = (float)camera_get_viewport_height() / camera_get_zoom_ratio();
