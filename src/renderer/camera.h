@@ -20,6 +20,8 @@ void camera_set_moving_right(bool moving_right);
 
 float camera_get_zoom();
 
+float camera_get_zoom_factor();
+
 float camera_get_zoom_ratio();
 
 void camera_set_zoom(float zoom);

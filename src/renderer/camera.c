@@ -5,8 +5,8 @@
 #include "camera.h"
 #include <cglm/cglm.h>
 
-static int g_viewport_width = 800;
-static int g_viewport_height = 600;
+static int g_viewport_width = 1280;
+static int g_viewport_height = 720;
 
 static vec3 g_camera_position = {0.0f, 0.0f, 2.0f};
 
@@ -82,6 +82,11 @@ void camera_set_moving_right(bool moving_right)
 float camera_get_zoom()
 {
     return g_zoom;
+}
+
+float camera_get_zoom_factor()
+{
+    return g_zoom_factor;
 }
 
 float camera_get_zoom_ratio()

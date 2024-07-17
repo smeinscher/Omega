@@ -287,34 +287,32 @@ void board_handle_tile_click(Board *board)
         board->selected_point = -1;
         board->selected_tile_index_x = -1;
         board->selected_tile_index_y = -1;
-        memset(board->selected_tiles, 0, 36);
+        memset(board->selected_tiles, -1, 36);
+        memset(board->selected_tiles_vertices, 0, 38 * 12);
     }
 }
 
-void board_update_hovered_tile(Board *board, float mouse_pos_x, float mouse_pos_y, float scale,
-                               float adjusted_window_width, float adjusted_window_height)
+void board_update_hovered_tile(Board *board, float mouse_board_pos_x, float mouse_board_pos_y)
 {
     float board_width = (float)board->board_dimension_x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH / 4.0f;
-    float board_height = (float)board->board_dimension_y * BOARD_HEX_TILE_HEIGHT;
-    float adjusted_pos_x = mouse_pos_x - (adjusted_window_width - board_width) / 2.0f;
-    float adjusted_pos_y = mouse_pos_y - (adjusted_window_height - board_height) / 2.0f;
-
-    if (adjusted_pos_x < 0 || adjusted_pos_x > board_width || adjusted_pos_y < 0 || adjusted_pos_y > board_height)
+    float board_height = (float)board->board_dimension_y * BOARD_HEX_TILE_HEIGHT + BOARD_HEX_TILE_HEIGHT / 2.0f;
+    if (mouse_board_pos_x < 0 || mouse_board_pos_x > board_width || mouse_board_pos_y < 0 ||
+        mouse_board_pos_y > board_height)
     {
         board->mouse_tile_index_x = -1;
         board->mouse_tile_index_y = -1;
         board->hovered_point = -1;
         return;
     }
-
-    board->mouse_tile_index_x = (int)floorf(adjusted_pos_x / (3.0f * BOARD_HEX_TILE_WIDTH / 4.0f));
+    board->mouse_tile_index_x = (int)floorf(mouse_board_pos_x / (3.0f * BOARD_HEX_TILE_WIDTH / 4.0f));
     board->mouse_tile_index_y =
-        (int)(floorf((adjusted_pos_y + BOARD_HEX_TILE_HEIGHT / 2.0f * (float)(board->mouse_tile_index_x % 2)) /
+        (int)(floorf((mouse_board_pos_y + BOARD_HEX_TILE_HEIGHT / 2.0f * (float)(board->mouse_tile_index_x % 2)) /
                      BOARD_HEX_TILE_HEIGHT)) -
         board->mouse_tile_index_x % 2;
-    float opposite = adjusted_pos_y - ((float)board->mouse_tile_index_y * BOARD_HEX_TILE_HEIGHT +
-                                       BOARD_HEX_TILE_HEIGHT / ((float)((board->mouse_tile_index_x + 1) % 2) + 1.0f));
-    float adjacent = adjusted_pos_x - (float)board->mouse_tile_index_x * 3.0f * BOARD_HEX_TILE_WIDTH / 4.0f;
+    float opposite =
+        mouse_board_pos_y - ((float)board->mouse_tile_index_y * BOARD_HEX_TILE_HEIGHT +
+                             BOARD_HEX_TILE_HEIGHT / ((float)((board->mouse_tile_index_x + 1) % 2) + 1.0f));
+    float adjacent = mouse_board_pos_x - (float)board->mouse_tile_index_x * 3.0f * BOARD_HEX_TILE_WIDTH / 4.0f;
     float angle = atan2f(opposite, adjacent);
     if (angle > atan2f(BOARD_HEX_TILE_HEIGHT / 2.0f, BOARD_HEX_TILE_WIDTH / 4.0f))
     {
@@ -366,24 +364,38 @@ void board_add_fill_vertices(const float *board_point_vertices, float *board_fil
     board_fill_vertices[board_vertices_index + 10] = board_point_vertices[start_point + 6];
     board_fill_vertices[board_vertices_index + 11] = board_point_vertices[start_point + 7];
 
-    board_fill_vertices[board_vertices_index] = board_point_vertices[start_point];
-    board_fill_vertices[board_vertices_index + 1] = board_point_vertices[start_point + 1];
-    board_fill_vertices[board_vertices_index + 2] = board_point_vertices[start_point + 6];
-    board_fill_vertices[board_vertices_index + 3] = board_point_vertices[start_point + 7];
-    board_fill_vertices[board_vertices_index + 4] = board_point_vertices[start_point + offset + 4];
-    board_fill_vertices[board_vertices_index + 5] = board_point_vertices[start_point + offset + 5];
+    board_fill_vertices[board_vertices_index + 12] = board_point_vertices[start_point];
+    board_fill_vertices[board_vertices_index + 13] = board_point_vertices[start_point + 1];
+    board_fill_vertices[board_vertices_index + 14] = board_point_vertices[start_point + 6];
+    board_fill_vertices[board_vertices_index + 15] = board_point_vertices[start_point + 7];
+    board_fill_vertices[board_vertices_index + 16] = board_point_vertices[start_point + offset + 4];
+    board_fill_vertices[board_vertices_index + 17] = board_point_vertices[start_point + offset + 5];
 
-    board_fill_vertices[board_vertices_index] = board_point_vertices[start_point];
-    board_fill_vertices[board_vertices_index + 1] = board_point_vertices[start_point + 1];
-    board_fill_vertices[board_vertices_index + 2] = board_point_vertices[start_point + offset + 4];
-    board_fill_vertices[board_vertices_index + 3] = board_point_vertices[start_point + offset + 5];
-    board_fill_vertices[board_vertices_index + 4] = board_point_vertices[start_point + offset + 2];
-    board_fill_vertices[board_vertices_index + 5] = board_point_vertices[start_point + offset + 3];
+    board_fill_vertices[board_vertices_index + 18] = board_point_vertices[start_point];
+    board_fill_vertices[board_vertices_index + 19] = board_point_vertices[start_point + 1];
+    board_fill_vertices[board_vertices_index + 20] = board_point_vertices[start_point + offset + 4];
+    board_fill_vertices[board_vertices_index + 21] = board_point_vertices[start_point + offset + 5];
+    board_fill_vertices[board_vertices_index + 22] = board_point_vertices[start_point + offset + 2];
+    board_fill_vertices[board_vertices_index + 23] = board_point_vertices[start_point + offset + 3];
 }
 
 void board_update_fill_vertices(Board *board)
 {
-    board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, 0,
+    memset(board->selected_tiles_vertices, 0, 40 * 12);
+    if (board->mouse_tile_index_x >= 0 && board->mouse_tile_index_x < board->board_dimension_x &&
+        board->mouse_tile_index_y >= 0 && board->mouse_tile_index_y < board->board_dimension_y)
+    {
+        board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, 0,
+                                coords_to_point(board->mouse_tile_index_x, board->mouse_tile_index_y,
+                                                board->board_dimension_x, board->board_dimension_y),
+                                board->board_dimension_x, board->board_dimension_y);
+    }
+    if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
+        board->selected_tile_index_y < 0 || board->selected_tile_index_y >= board->board_dimension_y)
+    {
+        return;
+    }
+    board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, 24,
                             coords_to_point(board->selected_tile_index_x, board->selected_tile_index_y,
                                             board->board_dimension_x, board->board_dimension_y),
                             board->board_dimension_x, board->board_dimension_y);
@@ -391,7 +403,7 @@ void board_update_fill_vertices(Board *board)
     {
         int x = board->selected_tiles[i];
         int y = board->selected_tiles[i + 1];
-        board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, i * 24,
+        board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, (i + 2) * 24,
                                 coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
                                 board->board_dimension_x, board->board_dimension_y);
     }

@@ -137,6 +137,24 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
     return g_basic_vertex_data_size++;
 }
 
+void basic_update_vertex_data(unsigned int vertex_data_id, float *positions, float *uvs, float *colors,
+                              unsigned int vertex_count)
+{
+    if (positions != NULL)
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, g_basic_vertex_data[vertex_data_id].vbos[0]);
+        if (vertex_count <= g_basic_vertex_data[vertex_data_id].count)
+        {
+            glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_count * 2 * sizeof(float), positions);
+        }
+        else
+        {
+            glBufferData(GL_ARRAY_BUFFER, vertex_count * 2 * sizeof(float), positions, GL_DYNAMIC_DRAW);
+            g_basic_vertex_data[vertex_data_id].count = vertex_count;
+        }
+    }
+}
+
 void basic_draw_arrays(unsigned int vertex_data_id, unsigned int program, unsigned int mode)
 {
     glUseProgram(program);

@@ -12,10 +12,10 @@
 
 void loading_screen(const bool *done_loading)
 {
-    Texture texture = generate_opengl_texture("resources/textures/loading_background.png");
+    Texture texture = generate_opengl_texture("../resources/textures/loading_background.png");
 
     Shader shader =
-        opengl_load_basic_shaders("resources/shaders/board_borders.vert", "resources/shaders/board_borders.frag");
+        opengl_load_basic_shaders("../resources/shaders/board_borders.vert", "../resources/shaders/board_borders.frag");
 
     float *bg_img_positions;
     bg_img_positions = malloc(sizeof(float) * 12);

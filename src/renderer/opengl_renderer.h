@@ -34,6 +34,9 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
                                       unsigned int instance_offsets_count, unsigned int *indices,
                                       unsigned int indices_count, unsigned int dynamic_draw_flag);
 
+void basic_update_vertex_data(unsigned int vertex_data_id, float *positions, float *uvs, float *colors,
+                              unsigned int vertex_count);
+
 void basic_draw_arrays(unsigned int vertex_data_id, unsigned int program, unsigned int mode);
 
 void basic_draw_elements(unsigned int vertex_data_id, unsigned int program, unsigned int mode);
