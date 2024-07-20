@@ -2,12 +2,25 @@
 
 #include "main_menu_scene.h"
 #include "../../external/nuklear/nuklear.h"
+#include "../platform/platform.h"
 #include "../ui/nuklear_config.h"
 #include "scene_state.h"
 #include <stdio.h>
 
+void main_menu_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_ESCAPE)
+    {
+        if (action == GLFW_PRESS)
+        {
+            platform_set_window_should_close(true);
+        }
+    }
+}
+
 void main_menu_scene_init()
 {
+    platform_set_callbacks(NULL, main_menu_scene_glfw_key_callback, NULL, NULL, NULL);
 }
 
 void main_menu_scene_update()

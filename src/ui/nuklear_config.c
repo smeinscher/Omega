@@ -15,6 +15,7 @@
 #define NK_KEYSTATE_BASED_INPUT
 #include "../../external/nuklear/nuklear.h"
 #include "../../external/nuklear/nuklear_glfw_gl3.h"
+#include "../renderer/opengl_renderer.h"
 
 struct nk_glfw g_glfw = {0};
 struct nk_context *g_ctx = NULL;
@@ -82,11 +83,7 @@ void omega_nuklear_end()
     nk_end(g_ctx);
     nk_glfw3_render(&g_glfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glEnable(GL_LINE_WIDTH);
-    glLineWidth(1.0f);
+    opengl_enable_default_attributes();
 }
 
 void omega_nuklear_shutdown()

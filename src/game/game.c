@@ -73,5 +73,5 @@ void game_shutdown()
 
 bool game_is_running()
 {
-    return !platform_window_should_closs();
+    return !platform_window_should_close();
 }

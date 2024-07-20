@@ -9,6 +9,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static float hovered_tile_color[4] = {0.7f, 0.7f, 0.7f, 0.6f};
+static float selected_tile_color[4] = {0.2f, 0.7f, 0.9f, 0.3f};
+static float highlighted_tile_color[4] = {0.2f, 0.7f, 0.9f, 0.2f};
+
 static int coords_to_point(int x_pos, int y_pos, int dimension_x, int dimension_y)
 {
     if (x_pos < 0 || x_pos >= dimension_x || y_pos < 0 || y_pos >= dimension_y)
@@ -191,10 +195,19 @@ Board *board_create(int dimension_x, int dimension_y)
         }
     }
 
-    board->selected_tiles = malloc(sizeof(int) * dimension_x * dimension_y);
-    unsigned int num_vertices = dimension_y * dimension_x * 24;
-    board->selected_tiles_vertices = malloc(sizeof(float) * num_vertices);
-    memset(board->selected_tiles_vertices, 0, num_vertices);
+    // Allocate memory for all tiles on board
+    // TODO: do this a smarter way
+    board->selected_tiles = malloc(sizeof(int) * dimension_x * dimension_y * 2);
+    memset(board->selected_tiles, -1, sizeof(int) * dimension_x * dimension_y * 2);
+    // Each tile (hex) has 4 inner triangles, each with 3 vertices. 12 total vertices to store;
+    // TODO: make 12 a variable or something
+    unsigned int num_vertices = dimension_y * dimension_x * 12;
+    // 2 position values per vertex
+    board->board_fill_positions = malloc(sizeof(float) * num_vertices * 2);
+    memset(board->board_fill_positions, 0, sizeof(float) * num_vertices * 2);
+    // 4 color values per vertex
+    board->board_fill_colors = malloc(sizeof(float) * num_vertices * 4);
+    memset(board->board_fill_colors, 0, sizeof(float) * num_vertices * 4);
     return board;
 }
 
@@ -287,8 +300,9 @@ void board_handle_tile_click(Board *board)
         board->selected_point = -1;
         board->selected_tile_index_x = -1;
         board->selected_tile_index_y = -1;
-        memset(board->selected_tiles, -1, 36);
-        memset(board->selected_tiles_vertices, 0, 38 * 12);
+        memset(board->selected_tiles, -1, board->board_dimension_x * board->board_dimension_y * 2);
+        memset(board->board_fill_positions, 0, 12 * board->board_dimension_x * board->board_dimension_y * 2);
+        memset(board->board_fill_colors, 0, 12 * board->board_dimension_x * board->board_dimension_y * 4);
     }
 }
 
@@ -379,32 +393,122 @@ void board_add_fill_vertices(const float *board_point_vertices, float *board_fil
     board_fill_vertices[board_vertices_index + 23] = board_point_vertices[start_point + offset + 3];
 }
 
+void board_add_fill_colors(float *board_fill_colors, int board_colors_index, float r, float g, float b, float a)
+{
+    // 12 total vertices to a hex
+    for (int i = 0; i < 12; i++)
+    {
+        board_fill_colors[board_colors_index + i * 4] = r;
+        board_fill_colors[board_colors_index + i * 4 + 1] = g;
+        board_fill_colors[board_colors_index + i * 4 + 2] = b;
+        board_fill_colors[board_colors_index + i * 4 + 3] = a;
+    }
+}
+
 void board_update_fill_vertices(Board *board)
 {
-    memset(board->selected_tiles_vertices, 0, 40 * 12);
+    memset(board->board_fill_positions, 0,
+           sizeof(float) * 12 * board->board_dimension_x * board->board_dimension_y * 2);
+    memset(board->board_fill_colors, 0, sizeof(float) * 12 * board->board_dimension_x * board->board_dimension_y * 4);
     if (board->mouse_tile_index_x >= 0 && board->mouse_tile_index_x < board->board_dimension_x &&
         board->mouse_tile_index_y >= 0 && board->mouse_tile_index_y < board->board_dimension_y)
     {
-        board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, 0,
+        int hovered_tile_index =
+            (board->mouse_tile_index_y * board->board_dimension_x + board->mouse_tile_index_x) * 12;
+        board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, hovered_tile_index * 2,
                                 coords_to_point(board->mouse_tile_index_x, board->mouse_tile_index_y,
                                                 board->board_dimension_x, board->board_dimension_y),
                                 board->board_dimension_x, board->board_dimension_y);
+        board_add_fill_colors(board->board_fill_colors, hovered_tile_index * 4, hovered_tile_color[0],
+                              hovered_tile_color[1], hovered_tile_color[2], hovered_tile_color[3]);
     }
     if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
         board->selected_tile_index_y < 0 || board->selected_tile_index_y >= board->board_dimension_y)
     {
         return;
     }
-    board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, 24,
+    int selected_tile_index =
+        (board->selected_tile_index_y * board->board_dimension_x + board->selected_tile_index_x) * 12;
+    board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, selected_tile_index * 2,
                             coords_to_point(board->selected_tile_index_x, board->selected_tile_index_y,
                                             board->board_dimension_x, board->board_dimension_y),
                             board->board_dimension_x, board->board_dimension_y);
+    float mod_r = 1.0f;
+    float mod_g = 1.0f;
+    float mod_b = 1.0f;
+    float mod_a = selected_tile_color[3];
+    if (board->mouse_tile_index_x == board->selected_tile_index_x &&
+        board->mouse_tile_index_y == board->selected_tile_index_y)
+    {
+        mod_r = hovered_tile_color[0];
+        mod_g = hovered_tile_color[1];
+        mod_b = hovered_tile_color[2];
+        mod_a = hovered_tile_color[3];
+    }
+    board_add_fill_colors(board->board_fill_colors, selected_tile_index * 4, selected_tile_color[0] * mod_r,
+                          selected_tile_color[1] * mod_g, selected_tile_color[2] * mod_b, mod_a);
     for (int i = 0; i < 36; i += 2)
     {
         int x = board->selected_tiles[i];
         int y = board->selected_tiles[i + 1];
-        board_add_fill_vertices(board->board_outline_vertices, board->selected_tiles_vertices, (i + 2) * 24,
+        if (x < 0 || x >= board->board_dimension_x || y < 0 || y >= board->board_dimension_y)
+        {
+            continue;
+        }
+        int highlighted_tile_index = (y * board->board_dimension_x + x) * 12;
+        board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, highlighted_tile_index * 2,
                                 coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
                                 board->board_dimension_x, board->board_dimension_y);
+        mod_r = 1.0f;
+        mod_g = 1.0f;
+        mod_b = 1.0f;
+        mod_a = highlighted_tile_color[3];
+        if (board->mouse_tile_index_x == x && board->mouse_tile_index_y == y)
+        {
+            mod_r = hovered_tile_color[0];
+            mod_g = hovered_tile_color[1];
+            mod_b = hovered_tile_color[2];
+            mod_a = hovered_tile_color[3];
+        }
+        board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4, highlighted_tile_color[0] * mod_r,
+                              highlighted_tile_color[1] * mod_g, highlighted_tile_color[2] * mod_b, mod_a);
     }
+}
+
+void board_clear(Board *board)
+{
+    board->board_dimension_x = 0;
+    board->board_dimension_y = 0;
+    board->hovered_point = -1;
+    board->selected_point = -1;
+    board->mouse_tile_index_x = -1;
+    board->mouse_tile_index_y = -1;
+    board->selected_tile_index_x = -1;
+    board->selected_tile_index_y = -1;
+    free(board->selected_tiles);
+    board->selected_tiles = NULL;
+    free(board->board_fill_positions);
+    board->board_fill_positions = NULL;
+    free(board->board_fill_colors);
+    board->board_fill_colors = NULL;
+    free(board->tile_occupation_status);
+    board->tile_occupation_status = NULL;
+    free(board->board_outline_vertices);
+    board->board_outline_vertices = NULL;
+    free(board->board_outline_indices);
+    board->board_outline_indices = NULL;
+    free(board->board_tile_offsets);
+    board->board_tile_offsets = NULL;
+    free(board->board_border_positions);
+    board->board_border_positions = NULL;
+    free(board->board_border_uvs);
+    board->board_border_uvs = NULL;
+    free(board->board_border_colors);
+    board->board_border_colors = NULL;
+}
+
+void board_destroy(Board *board)
+{
+    board_clear(board);
+    free(board);
 }

@@ -46,7 +46,6 @@ void reload_game()
     struct timespec current_ts = get_file_timestamp("libOmegaApp.so");
     if (current_ts.tv_sec > last_edit_ts.tv_sec)
     {
-        // TODO: logging stuff
         bool done_loading = false;
         pthread_t loading_thread_id;
         pthread_create(&loading_thread_id, NULL, hot_reload_thread, &done_loading);

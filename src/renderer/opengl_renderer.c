@@ -140,26 +140,53 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
 void basic_update_vertex_data(unsigned int vertex_data_id, float *positions, float *uvs, float *colors,
                               unsigned int vertex_count)
 {
-    if (positions != NULL)
+    if (positions == NULL)
     {
-        glBindBuffer(GL_ARRAY_BUFFER, g_basic_vertex_data[vertex_data_id].vbos[0]);
+        // TODO: logging stuff
+        printf("Positions should not be null\n");
+        return;
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, g_basic_vertex_data[vertex_data_id].vbos[0]);
+    if (vertex_count <= g_basic_vertex_data[vertex_data_id].count)
+    {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_count * 2 * sizeof(float), positions);
+    }
+    else
+    {
+        glBufferData(GL_ARRAY_BUFFER, vertex_count * 2 * sizeof(float), positions, GL_DYNAMIC_DRAW);
+    }
+    if (uvs != NULL)
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, g_basic_vertex_data[vertex_data_id].vbos[1]);
         if (vertex_count <= g_basic_vertex_data[vertex_data_id].count)
         {
-            glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_count * 2 * sizeof(float), positions);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_count * 2 * sizeof(float), uvs);
         }
         else
         {
-            glBufferData(GL_ARRAY_BUFFER, vertex_count * 2 * sizeof(float), positions, GL_DYNAMIC_DRAW);
-            g_basic_vertex_data[vertex_data_id].count = vertex_count;
+            glBufferData(GL_ARRAY_BUFFER, vertex_count * 2 * sizeof(float), uvs, GL_DYNAMIC_DRAW);
         }
     }
+    if (colors != NULL)
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, g_basic_vertex_data[vertex_data_id].vbos[2]);
+        if (vertex_count <= g_basic_vertex_data[vertex_data_id].count)
+        {
+            glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_count * 4 * sizeof(float), colors);
+        }
+        else
+        {
+            glBufferData(GL_ARRAY_BUFFER, vertex_count * 4 * sizeof(float), colors, GL_DYNAMIC_DRAW);
+        }
+    }
+    g_basic_vertex_data[vertex_data_id].count = vertex_count;
 }
 
 void basic_draw_arrays(unsigned int vertex_data_id, unsigned int program, unsigned int mode)
 {
     glUseProgram(program);
     glBindVertexArray(g_basic_vertex_data[vertex_data_id].vao);
-    glDrawArrays(mode, 0, g_basic_vertex_data[vertex_data_id].count * 6);
+    glDrawArrays(mode, 0, g_basic_vertex_data[vertex_data_id].count);
 }
 
 void basic_draw_elements(unsigned int vertex_data_id, unsigned int program, unsigned int mode)
@@ -184,20 +211,6 @@ void clean_vertex_data(unsigned int vertex_data_id)
     glDeleteBuffers(1, &g_basic_vertex_data[vertex_data_id].vbos[1]);
     glDeleteBuffers(1, &g_basic_vertex_data[vertex_data_id].vbos[2]);
     glDeleteBuffers(1, &g_basic_vertex_data[vertex_data_id].ebo);
-    g_basic_vertex_data[vertex_data_id].count = 0;
-    g_basic_vertex_data[vertex_data_id].dimensions = 0;
-    free(g_basic_vertex_data[vertex_data_id].positions);
-    g_basic_vertex_data[vertex_data_id].positions = NULL;
-    free(g_basic_vertex_data[vertex_data_id].uvs);
-    g_basic_vertex_data[vertex_data_id].uvs = NULL;
-    free(g_basic_vertex_data[vertex_data_id].colors);
-    g_basic_vertex_data[vertex_data_id].colors = NULL;
-    if (g_basic_vertex_data[vertex_data_id].indices_count > 0)
-    {
-        free(g_basic_vertex_data[vertex_data_id].indices);
-        g_basic_vertex_data[vertex_data_id].indices = NULL;
-        g_basic_vertex_data[vertex_data_id].indices_count = 0;
-    }
 }
 
 void clean_all_vertex_data()

@@ -25,6 +25,9 @@ static Shader board_fill_program = {0};
 static unsigned int board_fill_id = 0;
 static Texture board_texture = {0};
 
+double g_mouse_pos_x = 0.0;
+double g_mouse_pos_y = 0.0;
+
 void main_game_scene_glfw_framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
@@ -96,30 +99,10 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
     }
 }
 
-double g_mouse_pos_x = 0.0;
-double g_mouse_pos_y = 0.0;
-float g_modified_x_pos = 0.0f;
-float g_modified_y_pos = 0.0f;
-
 void main_game_scene_glfw_cursor_position_callback(GLFWwindow *window, double xpos, double ypos)
 {
     g_mouse_pos_x = xpos;
     g_mouse_pos_y = ypos;
-    vec4 pos_nds;
-    vec4 mouse_position = {(float)xpos, (float)ypos, 0.0f, 1.0f};
-    glm_mat4_mulv((vec4 *)camera_get_projection(), mouse_position, pos_nds);
-    float left = (float)camera_get_viewport_width() - (float)camera_get_viewport_width() / camera_get_zoom_ratio();
-    float right = (float)camera_get_viewport_width() / camera_get_zoom_ratio();
-    float bottom = (float)camera_get_viewport_height() / camera_get_zoom_ratio();
-    float top = (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
-    float factor = camera_get_zoom_factor();
-    float a = factor / (factor - (factor - camera_get_zoom()) * 2.0f);
-    float modified_x_pos = (pos_nds[0] + a) / (a * 2.0f) * (right - left);
-    float modified_y_pos = (bottom - top) - (pos_nds[1] + a) / (a * 2.0f) * (bottom - top);
-    g_modified_x_pos = modified_x_pos + (*camera_get_position())[0];
-    g_modified_y_pos = modified_y_pos + (*camera_get_position())[1];
-    board_update_hovered_tile(current_board, modified_x_pos + (*camera_get_position())[0] + left,
-                              modified_y_pos + (*camera_get_position())[1] + top);
 }
 
 void main_game_scene_glfw_mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
@@ -132,7 +115,6 @@ void main_game_scene_glfw_mouse_button_callback(GLFWwindow *window, int button, 
 
 void main_game_scene_glfw_scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
-    board_update_hovered_tile(current_board, -1.0f, -1.0f);
     camera_decrement_zoom((float)yoffset);
     if (camera_get_zoom() < 55.0f)
     {
@@ -142,6 +124,23 @@ void main_game_scene_glfw_scroll_callback(GLFWwindow *window, double xoffset, do
     {
         camera_set_zoom(125.0f);
     }
+}
+
+void main_game_scene_update_hovered_tile()
+{
+    vec4 pos_nds;
+    vec4 mouse_position = {(float)g_mouse_pos_x, (float)g_mouse_pos_y, 0.0f, 1.0f};
+    glm_mat4_mulv((vec4 *)camera_get_projection(), mouse_position, pos_nds);
+    float left = (float)camera_get_viewport_width() - (float)camera_get_viewport_width() / camera_get_zoom_ratio();
+    float right = (float)camera_get_viewport_width() / camera_get_zoom_ratio();
+    float bottom = (float)camera_get_viewport_height() / camera_get_zoom_ratio();
+    float top = (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
+    float factor = camera_get_zoom_factor();
+    float a = factor / (factor - (factor - camera_get_zoom()) * 2.0f);
+    float modified_x_pos = (pos_nds[0] + a) / (a * 2.0f) * (right - left);
+    float modified_y_pos = (bottom - top) - (pos_nds[1] + a) / (a * 2.0f) * (bottom - top);
+    board_update_hovered_tile(current_board, modified_x_pos + (*camera_get_position())[0] + left,
+                              modified_y_pos + (*camera_get_position())[1] + top);
 }
 
 void main_game_scene_init()
@@ -165,7 +164,8 @@ void main_game_scene_init()
     board_fill_program =
         opengl_load_basic_shaders("../resources/shaders/board_fill.vert", "../resources/shaders/board_fill.frag");
     board_fill_id =
-        basic_vertex_data_create(board->selected_tiles_vertices, 2, NULL, NULL, 38 * 24, NULL, 0, NULL, 0, 0);
+        basic_vertex_data_create(board->board_fill_positions, 2, NULL, board->board_fill_colors,
+                                 board->board_dimension_y * board->board_dimension_x * 12, NULL, 0, NULL, 0, 0);
 
     current_board = board;
 
@@ -175,6 +175,7 @@ void main_game_scene_init()
 void main_game_scene_update()
 {
     camera_update();
+    main_game_scene_update_hovered_tile();
 }
 
 void main_game_scene_render()
@@ -191,7 +192,8 @@ void main_game_scene_render()
     opengl_set_uniform_mat4(board_fill_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(board_fill_program.program, "projection", (vec4 *)camera_get_projection());
     board_update_fill_vertices(current_board);
-    basic_update_vertex_data(board_fill_id, current_board->selected_tiles_vertices, NULL, NULL, 38);
+    basic_update_vertex_data(board_fill_id, current_board->board_fill_positions, NULL, current_board->board_fill_colors,
+                             12 * current_board->board_dimension_x * current_board->board_dimension_y);
     basic_draw_elements(board_outline_id, board_outline_program.program, GL_LINES);
     basic_draw_arrays_instanced(board_borders_id, board_borders_program.program, 21 * 21);
     basic_draw_arrays(board_fill_id, board_fill_program.program, GL_TRIANGLES);
@@ -204,9 +206,6 @@ void main_game_scene_render()
         char mouse_pos_str[100];
         sprintf(mouse_pos_str, "Mouse Position: %.2lf, %.2lf", g_mouse_pos_x, g_mouse_pos_y);
         nk_label(ctx, mouse_pos_str, NK_TEXT_ALIGN_LEFT);
-        char mod_mouse_pos_str[100];
-        sprintf(mod_mouse_pos_str, "Modified Mouse Position: %.2f, %.2f", g_modified_x_pos, g_modified_y_pos);
-        nk_label(ctx, mod_mouse_pos_str, NK_TEXT_ALIGN_LEFT);
     }
     omega_nuklear_end();
 }
@@ -216,5 +215,7 @@ void main_game_scene_clean()
     clean_all_vertex_data();
     glDeleteProgram(board_borders_program.program);
     glDeleteProgram(board_outline_program.program);
-    free(current_board);
+    glDeleteProgram(board_fill_program.program);
+    board_destroy(current_board);
+    current_board = NULL;
 }

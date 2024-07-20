@@ -20,7 +20,9 @@ void platform_set_callbacks(void *framebuffer_size, void *key, void *cursor_pos,
 
 void platform_init_nuklear();
 
-bool platform_window_should_closs();
+bool platform_window_should_close();
+
+void platform_set_window_should_close(bool window_should_close);
 
 void platform_swap_buffers();
 

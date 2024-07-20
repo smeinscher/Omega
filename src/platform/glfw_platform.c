@@ -84,9 +84,14 @@ void platform_init_nuklear()
     omega_nuklear_set_style(OMEGA_NUKLEAR_DARK);
 }
 
-bool platform_window_should_closs()
+bool platform_window_should_close()
 {
     return glfwWindowShouldClose(g_main_window);
+}
+
+void platform_set_window_should_close(bool window_should_close)
+{
+    glfwSetWindowShouldClose(g_main_window, window_should_close);
 }
 
 void platform_swap_buffers()
