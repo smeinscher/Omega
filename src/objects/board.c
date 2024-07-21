@@ -136,11 +136,10 @@ unsigned int *board_outline_indices_create(int dimension_x, int dimension_y)
 
 void board_set_tile_border_vertices(Board *board, int x, int y, int border_type, int start_index)
 {
-
     board->board_border_positions[start_index] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
     board->board_border_positions[start_index + 1] =
         (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
-    board->board_border_positions[start_index + 2] = (float)x * BOARD_HEX_TILE_WIDTH + BOARD_HEX_TILE_WIDTH;
+    board->board_border_positions[start_index + 2] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
     board->board_border_positions[start_index + 3] =
         (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
     board->board_border_positions[start_index + 4] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
@@ -149,10 +148,10 @@ void board_set_tile_border_vertices(Board *board, int x, int y, int border_type,
     board->board_border_positions[start_index + 6] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
     board->board_border_positions[start_index + 7] =
         (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
-    board->board_border_positions[start_index + 8] = (float)x * BOARD_HEX_TILE_WIDTH + BOARD_HEX_TILE_WIDTH;
+    board->board_border_positions[start_index + 8] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
     board->board_border_positions[start_index + 9] =
         (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
-    board->board_border_positions[start_index + 10] = (float)x * BOARD_HEX_TILE_WIDTH + BOARD_HEX_TILE_WIDTH;
+    board->board_border_positions[start_index + 10] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
     board->board_border_positions[start_index + 11] =
         (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
 
@@ -172,17 +171,17 @@ void board_set_tile_border_vertices(Board *board, int x, int y, int border_type,
 
 void board_set_tile_ownership(Board *board)
 {
-    memset(board->tile_ownership_status, 0, sizeof(int) * board->board_dimension_x * board->board_dimension_y);
-    board->tile_ownership_status[0] = 1;
-    board->board_borders_count = 2;
+    memset(board->tile_ownership_status, 0, sizeof(int) * board->board_dimension_x * board->board_dimension_y / 2);
+    memset(board->tile_ownership_status + board->board_dimension_x * board->board_dimension_y / 2, 1,
+           sizeof(int) * board->board_dimension_x * board->board_dimension_y / 2);
+    board->board_borders_count = sizeof(int) * board->board_dimension_x * board->board_dimension_y / 2;
 }
 
 // TODO: Error checking for malloc
 Board *board_create(int dimension_x, int dimension_y)
 {
-    Board *board;
-    board = malloc(sizeof(Board));
-    if (!board)
+    Board *board = malloc(sizeof(Board));
+    if (board == NULL)
     {
         printf("Error allocating board\n");
         return NULL;
