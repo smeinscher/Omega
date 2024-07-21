@@ -12,16 +12,14 @@
 typedef struct BasicVertexData
 {
     unsigned int vao;
-    unsigned int vbos[4];
+    unsigned int vbos[3];
     unsigned int ebo;
     unsigned int count;
     unsigned int dimensions;
     unsigned int indices_count;
-    unsigned int instance_offsets_count;
     float *positions;
     float *uvs;
     float *colors;
-    float *instance_offsets;
     unsigned int *indices;
 } BasicVertexData;
 
@@ -30,9 +28,8 @@ int opengl_glad_init();
 void opengl_enable_default_attributes();
 
 unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions, float *uvs, float *colors,
-                                      unsigned int vertex_count, float *instance_offsets,
-                                      unsigned int instance_offsets_count, unsigned int *indices,
-                                      unsigned int indices_count, unsigned int dynamic_draw_flag);
+                                      unsigned int vertex_count, unsigned int *indices, unsigned int indices_count,
+                                      unsigned int dynamic_draw_flag);
 
 void basic_update_vertex_data(unsigned int vertex_data_id, float *positions, float *uvs, float *colors,
                               unsigned int vertex_count);

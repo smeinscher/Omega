@@ -29,6 +29,11 @@ float *board_vertices_create(int dimension_x, int dimension_y, int board_offset_
 {
     unsigned int num_vertices = dimension_y * 2 + dimension_y * (dimension_x * 2) + dimension_x * 2 + 1;
     float *board_vertices = malloc(sizeof(float) * num_vertices * 2);
+    if (board_vertices == NULL)
+    {
+        printf("Error allocating board_vertices\n");
+        return NULL;
+    }
     int index = 0;
     for (int i = 0; i < dimension_y; i++)
     {
@@ -70,6 +75,11 @@ unsigned int *board_outline_indices_create(int dimension_x, int dimension_y)
 {
     unsigned int num_vertices = dimension_y * dimension_x * 12;
     unsigned int *board_indices = malloc(sizeof(unsigned int) * num_vertices);
+    if (board_indices == NULL)
+    {
+        printf("Error allocating board_indices\n");
+        return NULL;
+    }
     int index = 0;
     for (int i = 0; i < dimension_y; i++)
     {
@@ -124,11 +134,59 @@ unsigned int *board_outline_indices_create(int dimension_x, int dimension_y)
     return board_indices;
 }
 
+void board_set_tile_border_vertices(Board *board, int x, int y, int border_type, int start_index)
+{
+
+    board->board_border_positions[start_index] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
+    board->board_border_positions[start_index + 1] =
+        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
+    board->board_border_positions[start_index + 2] = (float)x * BOARD_HEX_TILE_WIDTH + BOARD_HEX_TILE_WIDTH;
+    board->board_border_positions[start_index + 3] =
+        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
+    board->board_border_positions[start_index + 4] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
+    board->board_border_positions[start_index + 5] =
+        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
+    board->board_border_positions[start_index + 6] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
+    board->board_border_positions[start_index + 7] =
+        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
+    board->board_border_positions[start_index + 8] = (float)x * BOARD_HEX_TILE_WIDTH + BOARD_HEX_TILE_WIDTH;
+    board->board_border_positions[start_index + 9] =
+        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
+    board->board_border_positions[start_index + 10] = (float)x * BOARD_HEX_TILE_WIDTH + BOARD_HEX_TILE_WIDTH;
+    board->board_border_positions[start_index + 11] =
+        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
+
+    board->board_border_uvs[start_index] = (float)border_type / 6.0f;
+    board->board_border_uvs[start_index + 1] = 1.0f;
+    board->board_border_uvs[start_index + 2] = ((float)border_type + 1.0f) / 6.0f;
+    board->board_border_uvs[start_index + 3] = 0.0f;
+    board->board_border_uvs[start_index + 4] = (float)border_type / 6.0f;
+    board->board_border_uvs[start_index + 5] = 0.0f;
+    board->board_border_uvs[start_index + 6] = (float)border_type / 6.0f;
+    board->board_border_uvs[start_index + 7] = 1.0f;
+    board->board_border_uvs[start_index + 8] = ((float)border_type + 1.0f) / 6.0f;
+    board->board_border_uvs[start_index + 9] = 0.0f;
+    board->board_border_uvs[start_index + 10] = ((float)border_type + 1.0f) / 6.0f;
+    board->board_border_uvs[start_index + 11] = 1.0f;
+}
+
+void board_set_tile_ownership(Board *board)
+{
+    memset(board->tile_ownership_status, 0, sizeof(int) * board->board_dimension_x * board->board_dimension_y);
+    board->tile_ownership_status[0] = 1;
+    board->board_borders_count = 2;
+}
+
 // TODO: Error checking for malloc
 Board *board_create(int dimension_x, int dimension_y)
 {
     Board *board;
     board = malloc(sizeof(Board));
+    if (!board)
+    {
+        printf("Error allocating board\n");
+        return NULL;
+    }
     board->board_dimension_x = dimension_x;
     board->board_dimension_y = dimension_y;
     board->hovered_point = -1;
@@ -137,76 +195,160 @@ Board *board_create(int dimension_x, int dimension_y)
     board->mouse_tile_index_y = -1;
     board->selected_tile_index_x = -1;
     board->selected_tile_index_y = -1;
+    board->board_borders_count = -1;
+    board->selected_tiles = NULL;
+    board->board_fill_positions = NULL;
+    board->board_fill_colors = NULL;
+    board->tile_occupation_status = NULL;
+    board->tile_ownership_status = NULL;
+    board->board_outline_vertices = NULL;
+    board->board_outline_indices = NULL;
+    board->board_border_positions = NULL;
+    board->board_border_uvs = NULL;
+    board->board_border_colors = NULL;
+
     board->tile_occupation_status = malloc(sizeof(int) * dimension_x * dimension_y);
+    if (board->tile_occupation_status == NULL)
+    {
+        printf("Error allocating tile_occupation_status\n");
+        board_destroy(board);
+        return NULL;
+    }
+    memset(board->tile_occupation_status, 0, sizeof(int) * dimension_x * dimension_y);
+    board->tile_ownership_status = malloc(sizeof(int) * dimension_x * dimension_y);
+    if (board->tile_ownership_status == NULL)
+    {
+        printf("Error allocating tile_ownership_status\n");
+        board_destroy(board);
+        return NULL;
+    }
+    board_set_tile_ownership(board);
 
     board->board_outline_vertices = board_vertices_create(dimension_x, dimension_y, 0, 0);
+    if (board->board_outline_vertices == NULL)
+    {
+        board_destroy(board);
+        return NULL;
+    }
     board->board_outline_indices = board_outline_indices_create(dimension_x, dimension_y);
+    if (board->board_outline_indices == NULL)
+    {
+        board_destroy(board);
+        return NULL;
+    }
 
-    board->board_border_positions = malloc(sizeof(float) * 12);
-    board->board_border_positions[0] = 0.0f;
-    board->board_border_positions[1] = BOARD_HEX_TILE_HEIGHT;
-    board->board_border_positions[2] = BOARD_HEX_TILE_WIDTH;
-    board->board_border_positions[3] = 0.0f;
-    board->board_border_positions[4] = 0.0f;
-    board->board_border_positions[5] = 0.0f;
-    board->board_border_positions[6] = 0.0f;
-    board->board_border_positions[7] = BOARD_HEX_TILE_HEIGHT;
-    board->board_border_positions[8] = BOARD_HEX_TILE_WIDTH;
-    board->board_border_positions[9] = 0.0f;
-    board->board_border_positions[10] = BOARD_HEX_TILE_WIDTH;
-    board->board_border_positions[11] = BOARD_HEX_TILE_HEIGHT;
+    board->board_border_positions = malloc(sizeof(float) * 12 * board->board_borders_count);
+    if (board->board_border_positions == NULL)
+    {
+        printf("Error allocating board_border_positions\n");
+        board_destroy(board);
+        return NULL;
+    }
+    memset(board->board_border_positions, 0, sizeof(float) * 12 * board->board_borders_count);
+    board->board_border_uvs = malloc(sizeof(float) * 12 * board->board_borders_count);
+    if (board->board_border_uvs == NULL)
+    {
+        printf("Error allocating board_border_uvs\n");
+        board_destroy(board);
+        return NULL;
+    }
+    memset(board->board_border_uvs, 0, sizeof(float) * 12 * board->board_borders_count);
+    int index = 0;
+    for (int i = 0; i < dimension_x * dimension_y; i++)
+    {
+        if (board->tile_ownership_status[i] != 0)
+        {
+            int x = i % dimension_x;
+            int y = i / dimension_x;
+            int bottom = i + dimension_x;
+            int bottom_left = i + (i % 2 == 0 ? -1 : dimension_x - 1);
+            int bottom_right = i + (i % 2 == 0 ? 1 : dimension_x + 1);
+            int top = i - dimension_x;
+            int top_left = i - (i % 2 == 0 ? dimension_x + 1 : 1);
+            int top_right = i - (i % 2 == 0 ? dimension_x - 1 : -1);
+            if (bottom > 0 && bottom < dimension_x * dimension_y &&
+                board->tile_ownership_status[bottom] != board->tile_ownership_status[i])
+            {
+                board_set_tile_border_vertices(board, x, y, 0, index);
+                index += 12;
+            }
+            if (bottom_left > 0 && bottom_left < dimension_x * dimension_y &&
+                board->tile_ownership_status[bottom_left] != board->tile_ownership_status[i])
+            {
+                board_set_tile_border_vertices(board, x, y, 1, index);
+                index += 12;
+            }
+            if (bottom_right > 0 && bottom_right < dimension_x * dimension_y &&
+                board->tile_ownership_status[bottom_right] != board->tile_ownership_status[i])
+            {
+                board_set_tile_border_vertices(board, x, y, 2, index);
+                index += 12;
+            }
+            if (top > 0 && top < dimension_x * dimension_y &&
+                board->tile_ownership_status[top] != board->tile_ownership_status[i])
+            {
+                board_set_tile_border_vertices(board, x, y, 3, index);
+                index += 12;
+            }
+            if (top_left > 0 && top_left < dimension_x * dimension_y &&
+                board->tile_ownership_status[top_left] != board->tile_ownership_status[i])
+            {
+                board_set_tile_border_vertices(board, x, y, 4, index);
+                index += 12;
+            }
+            if (top_right > 0 && top_right < dimension_x * dimension_y &&
+                board->tile_ownership_status[top_right] != board->tile_ownership_status[i])
+            {
+                board_set_tile_border_vertices(board, x, y, 5, index);
+                index += 12;
+            }
+        }
+    }
 
-    board->board_border_uvs = malloc(sizeof(float) * 12);
-    board->board_border_uvs[0] = 0.0f;
-    board->board_border_uvs[1] = 1.0f;
-    board->board_border_uvs[2] = 1.0f;
-    board->board_border_uvs[3] = 0.0f;
-    board->board_border_uvs[4] = 0.0f;
-    board->board_border_uvs[5] = 0.0f;
-    board->board_border_uvs[6] = 0.0f;
-    board->board_border_uvs[7] = 1.0f;
-    board->board_border_uvs[8] = 1.0f;
-    board->board_border_uvs[9] = 0.0f;
-    board->board_border_uvs[10] = 1.0f;
-    board->board_border_uvs[11] = 1.0f;
-
-    board->board_border_colors = malloc(sizeof(float) * 24);
-    for (int i = 0; i < 6; i++)
+    board->board_border_colors = malloc(sizeof(float) * 24 * board->board_borders_count);
+    if (board->board_border_colors == NULL)
+    {
+        printf("Error allocating board_border_colors\n");
+        board_destroy(board);
+        return NULL;
+    }
+    for (int i = 0; i < 6 * board->board_borders_count; i++)
     {
         board->board_border_colors[i * 4] = 0.7f;
-        board->board_border_colors[i * 4 + 1] = 0.7f;
-        board->board_border_colors[i * 4 + 2] = 0.7f;
+        board->board_border_colors[i * 4 + 1] = 0.0f;
+        board->board_border_colors[i * 4 + 2] = 0.0f;
         board->board_border_colors[i * 4 + 3] = 1.0f;
-    }
-
-    board->board_tile_offsets = malloc(sizeof(float) * dimension_y * dimension_x * 2);
-    if (board->board_tile_offsets == NULL)
-    {
-        // TODO: logging stuff
-        printf("Error allocating board_tile_offsets\n");
-    }
-    for (int i = 0; i < dimension_y; i++)
-    {
-        for (int j = 0; j < dimension_x; j++)
-        {
-            board->board_tile_offsets[(i * dimension_x + j) * 2] = (float)j * BOARD_HEX_TILE_WIDTH * 0.75f;
-            board->board_tile_offsets[(i * dimension_x + j) * 2 + 1] =
-                (float)i * BOARD_HEX_TILE_HEIGHT + (float)(j % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
-        }
     }
 
     // Allocate memory for all tiles on board
     // TODO: do this a smarter way
     board->selected_tiles = malloc(sizeof(int) * dimension_x * dimension_y * 2);
+    if (board->selected_tiles == NULL)
+    {
+        printf("Error allocating selected_tiles\n");
+        board_destroy(board);
+        return NULL;
+    }
     memset(board->selected_tiles, -1, sizeof(int) * dimension_x * dimension_y * 2);
     // Each tile (hex) has 4 inner triangles, each with 3 vertices. 12 total vertices to store;
-    // TODO: make 12 a variable or something
     unsigned int num_vertices = dimension_y * dimension_x * 12;
     // 2 position values per vertex
     board->board_fill_positions = malloc(sizeof(float) * num_vertices * 2);
+    if (board->board_fill_positions == NULL)
+    {
+        printf("Error allocating board_fill_positions\n");
+        board_destroy(board);
+        return NULL;
+    }
     memset(board->board_fill_positions, 0, sizeof(float) * num_vertices * 2);
     // 4 color values per vertex
     board->board_fill_colors = malloc(sizeof(float) * num_vertices * 4);
+    if (board->board_fill_colors == NULL)
+    {
+        printf("Error allocating board_fill_colors");
+        board_destroy(board);
+        return NULL;
+    }
     memset(board->board_fill_colors, 0, sizeof(float) * num_vertices * 4);
     return board;
 }
@@ -497,8 +639,6 @@ void board_clear(Board *board)
     board->board_outline_vertices = NULL;
     free(board->board_outline_indices);
     board->board_outline_indices = NULL;
-    free(board->board_tile_offsets);
-    board->board_tile_offsets = NULL;
     free(board->board_border_positions);
     board->board_border_positions = NULL;
     free(board->board_border_uvs);

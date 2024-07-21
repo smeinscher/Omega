@@ -153,23 +153,21 @@ void main_game_scene_init()
         opengl_load_basic_shaders("../resources/shaders/board_outline.vert", "../resources/shaders/board_outline.frag");
     board_outline_id = basic_vertex_data_create(
         board->board_outline_vertices, 2, NULL, NULL, board->board_dimension_y * (board->board_dimension_x * 2 + 2) * 2,
-        NULL, 0, board->board_outline_indices, board->board_dimension_x * board->board_dimension_y * 12, 0);
+        board->board_outline_indices, board->board_dimension_x * board->board_dimension_y * 12, 0);
 
     board_borders_program =
         opengl_load_basic_shaders("../resources/shaders/board_borders.vert", "../resources/shaders/board_borders.frag");
     board_borders_id = basic_vertex_data_create(board->board_border_positions, 2, board->board_border_uvs,
-                                                board->board_border_colors, 6, board->board_tile_offsets,
-                                                board->board_dimension_x * board->board_dimension_y, NULL, 0, 0);
+                                                board->board_border_colors, board->board_borders_count * 6, NULL, 0, 0);
 
     board_fill_program =
         opengl_load_basic_shaders("../resources/shaders/board_fill.vert", "../resources/shaders/board_fill.frag");
-    board_fill_id =
-        basic_vertex_data_create(board->board_fill_positions, 2, NULL, board->board_fill_colors,
-                                 board->board_dimension_y * board->board_dimension_x * 12, NULL, 0, NULL, 0, 0);
+    board_fill_id = basic_vertex_data_create(board->board_fill_positions, 2, NULL, board->board_fill_colors,
+                                             board->board_dimension_y * board->board_dimension_x * 12, NULL, 0, 0);
 
     current_board = board;
 
-    board_texture = generate_opengl_texture("../resources/textures/hex.png");
+    board_texture = generate_opengl_texture("../resources/textures/hex/hex_borders.png");
 }
 
 void main_game_scene_update()
@@ -195,8 +193,9 @@ void main_game_scene_render()
     basic_update_vertex_data(board_fill_id, current_board->board_fill_positions, NULL, current_board->board_fill_colors,
                              12 * current_board->board_dimension_x * current_board->board_dimension_y);
     basic_draw_elements(board_outline_id, board_outline_program.program, GL_LINES);
-    basic_draw_arrays_instanced(board_borders_id, board_borders_program.program, 21 * 21);
+    // basic_draw_arrays_instanced(board_borders_id, board_borders_program.program, 21 * 21);
     basic_draw_arrays(board_fill_id, board_fill_program.program, GL_TRIANGLES);
+    basic_draw_arrays(board_borders_id, board_borders_program.program, GL_TRIANGLES);
     omega_nuklear_start();
     struct nk_context *ctx = omega_nuklear_get_nuklear_context();
     if (nk_begin(ctx, "Debug", nk_rect(50, 50, 350, 250),

@@ -34,9 +34,8 @@ void opengl_enable_default_attributes()
 }
 
 unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions, float *uvs, float *colors,
-                                      unsigned int vertex_count, float *instance_offsets,
-                                      unsigned int instance_offsets_count, unsigned int *indices,
-                                      unsigned int indices_count, unsigned int dynamic_draw_flag)
+                                      unsigned int vertex_count, unsigned int *indices, unsigned int indices_count,
+                                      unsigned int dynamic_draw_flag)
 {
     if (g_basic_vertex_data_size >= OMEGA_GAME_MAX_VERTEX_DATA_COUNT)
     {
@@ -50,8 +49,6 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
     vertex_data.uvs = uvs;
     vertex_data.colors = colors;
     vertex_data.count = vertex_count;
-    vertex_data.instance_offsets = instance_offsets;
-    vertex_data.instance_offsets_count = instance_offsets_count;
     vertex_data.indices = indices;
     vertex_data.indices_count = indices_count;
     glGenVertexArrays(1, &vertex_data.vao);
@@ -63,10 +60,6 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
     if (colors != NULL)
     {
         glGenBuffers(1, &vertex_data.vbos[2]);
-    }
-    if (instance_offsets != NULL)
-    {
-        glGenBuffers(1, &vertex_data.vbos[3]);
     }
     if (indices_count > 0)
     {
@@ -110,17 +103,6 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
         glBufferData(GL_ARRAY_BUFFER, vertex_data.count * 4 * sizeof(float), vertex_data.colors, gl_usage);
         glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
         glEnableVertexAttribArray(2);
-    }
-
-    if (instance_offsets != NULL)
-    {
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_data.vbos[3]);
-        glBufferData(GL_ARRAY_BUFFER, vertex_data.instance_offsets_count * vertex_data.dimensions * sizeof(float),
-                     vertex_data.instance_offsets, gl_usage);
-        glVertexAttribPointer(3, vertex_data.dimensions, GL_FLOAT, GL_FALSE, vertex_data.dimensions * sizeof(float),
-                              (void *)0);
-        glEnableVertexAttribArray(3);
-        glVertexAttribDivisor(3, 1);
     }
 
     if (indices_count > 0)

@@ -22,14 +22,16 @@ typedef struct Board
     int selected_tile_index_x;
     int selected_tile_index_y;
 
+    int board_borders_count;
+
     int *selected_tiles;
     float *board_fill_positions;
     float *board_fill_colors;
     int *tile_occupation_status;
+    int *tile_ownership_status;
 
     float *board_outline_vertices;
     unsigned int *board_outline_indices;
-    float *board_tile_offsets;
     float *board_border_positions;
     float *board_border_uvs;
     float *board_border_colors;
@@ -42,6 +44,8 @@ void board_handle_tile_click(Board *board);
 void board_update_hovered_tile(Board *board, float mouse_board_pos_x, float mouse_board_pos_y);
 
 void board_update_fill_vertices(Board *board);
+
+void board_update_border(Board *board);
 
 void board_clear(Board *board);
 

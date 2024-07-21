@@ -57,8 +57,7 @@ void loading_screen(const bool *done_loading)
         bg_img_colors[i * 4 + 3] = 1.0f;
     }
 
-    unsigned int bg_img_id =
-        basic_vertex_data_create(bg_img_positions, 2, bg_img_uvs, bg_img_colors, 6, NULL, 0, NULL, 0, 0);
+    unsigned int bg_img_id = basic_vertex_data_create(bg_img_positions, 2, bg_img_uvs, bg_img_colors, 6, NULL, 0, 0);
 
     glBindTexture(GL_TEXTURE_2D, texture.id);
     vec3 camera_position = {0.0f, 0.0f, 2.0f};
