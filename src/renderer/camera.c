@@ -9,6 +9,8 @@ static int g_viewport_width = 1280;
 static int g_viewport_height = 720;
 
 static vec3 g_camera_position = {0.0f, 0.0f, 2.0f};
+static vec2 g_max_camera_position;
+static vec2 g_min_camera_position;
 
 static bool g_camera_moving_up = false;
 static bool g_camera_moving_down = false;
@@ -46,6 +48,22 @@ void camera_update()
     glm_vec3_scale(velocity, camera_get_zoom_ratio(), velocity);
     glm_vec3_add(g_camera_position, velocity, g_camera_position);
 
+    if (g_camera_position[0] >= g_max_camera_position[0] * camera_get_zoom_ratio())
+    {
+        g_camera_position[0] = g_max_camera_position[0] * camera_get_zoom_ratio();
+    }
+    if (g_camera_position[1] >= g_max_camera_position[1] * camera_get_zoom_ratio())
+    {
+        g_camera_position[1] = g_max_camera_position[1] * camera_get_zoom_ratio();
+    }
+    if (g_camera_position[0] <= g_min_camera_position[0] * camera_get_zoom_ratio())
+    {
+        g_camera_position[0] = g_min_camera_position[0] * camera_get_zoom_ratio();
+    }
+    if (g_camera_position[1] <= g_min_camera_position[1] * camera_get_zoom_ratio())
+    {
+        g_camera_position[1] = g_min_camera_position[1] * camera_get_zoom_ratio();
+    }
     vec3 forward = {0.0f, 0.0f, -1.0f};
     vec3 up = {0.0f, 1.0f, 0.0f};
     vec3 camera_position_plus_forward;
@@ -119,6 +137,18 @@ void camera_set_position(const vec3 position)
     g_camera_position[0] = position[0];
     g_camera_position[1] = position[1];
     g_camera_position[2] = position[2];
+}
+
+void camera_set_max_position(const vec2 position)
+{
+    g_max_camera_position[0] = position[0];
+    g_max_camera_position[1] = position[1];
+}
+
+void camera_set_min_position(const vec2 position)
+{
+    g_min_camera_position[0] = position[0];
+    g_min_camera_position[1] = position[1];
 }
 
 mat4 *camera_get_projection()

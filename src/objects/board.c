@@ -167,14 +167,68 @@ void board_set_tile_border_vertices(Board *board, int x, int y, int border_type,
     board->board_border_uvs[start_index + 9] = 0.0f;
     board->board_border_uvs[start_index + 10] = ((float)border_type + 1.0f) / 6.0f;
     board->board_border_uvs[start_index + 11] = 1.0f;
+
+    float color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    switch (board->tile_ownership_status[y * board->board_dimension_x + x])
+    {
+    case 1:
+        color[0] = 0.7f;
+        break;
+    case 2:
+        color[1] = 0.7f;
+        break;
+    case 3:
+        color[1] = 0.7f;
+        color[2] = 0.7f;
+        break;
+    case 4:
+        color[0] = 0.7f;
+        color[1] = 0.7f;
+        break;
+    default:
+        break;
+    }
+    for (int i = 0; i < 6; i++)
+    {
+        board->board_border_colors[start_index * 2 + i * 4] = color[0];
+        board->board_border_colors[start_index * 2 + i * 4 + 1] = color[1];
+        board->board_border_colors[start_index * 2 + i * 4 + 2] = color[2];
+        board->board_border_colors[start_index * 2 + i * 4 + 3] = color[3];
+    }
 }
 
 void board_set_tile_ownership(Board *board)
 {
-    memset(board->tile_ownership_status, 0, sizeof(int) * board->board_dimension_x * board->board_dimension_y / 2);
-    memset(board->tile_ownership_status + board->board_dimension_x * board->board_dimension_y / 2, 1,
-           sizeof(int) * board->board_dimension_x * board->board_dimension_y / 2);
-    board->board_borders_count = sizeof(int) * board->board_dimension_x * board->board_dimension_y / 2;
+    memset(board->tile_ownership_status, 0, sizeof(int) * board->board_dimension_x * board->board_dimension_y);
+    board->tile_ownership_status[0] = 1;
+    board->tile_ownership_status[1] = 1;
+    board->tile_ownership_status[2] = 1;
+    board->tile_ownership_status[board->board_dimension_x] = 1;
+    board->tile_ownership_status[board->board_dimension_x + 1] = 1;
+    board->tile_ownership_status[board->board_dimension_x + 2] = 1;
+
+    board->tile_ownership_status[(board->board_dimension_y - 2) * board->board_dimension_x] = 2;
+    board->tile_ownership_status[(board->board_dimension_y - 2) * board->board_dimension_x + 1] = 2;
+    board->tile_ownership_status[(board->board_dimension_y - 2) * board->board_dimension_x + 2] = 2;
+    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x] = 2;
+    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x + 1] = 2;
+    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x + 2] = 2;
+
+    board->tile_ownership_status[board->board_dimension_x - 3] = 3;
+    board->tile_ownership_status[board->board_dimension_x - 2] = 3;
+    board->tile_ownership_status[board->board_dimension_x - 1] = 3;
+    board->tile_ownership_status[2 * board->board_dimension_x - 3] = 3;
+    board->tile_ownership_status[2 * board->board_dimension_x - 2] = 3;
+    board->tile_ownership_status[2 * board->board_dimension_x - 1] = 3;
+
+    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x - 3] = 4;
+    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x - 2] = 4;
+    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x - 1] = 4;
+    board->tile_ownership_status[board->board_dimension_y * board->board_dimension_x - 3] = 4;
+    board->tile_ownership_status[board->board_dimension_y * board->board_dimension_x - 2] = 4;
+    board->tile_ownership_status[board->board_dimension_y * board->board_dimension_x - 1] = 4;
+
+    board->board_borders_count = sizeof(int) * board->board_dimension_x * board->board_dimension_y;
 }
 
 // TODO: Error checking for malloc
@@ -200,6 +254,9 @@ Board *board_create(int dimension_x, int dimension_y)
     board->board_fill_colors = NULL;
     board->tile_occupation_status = NULL;
     board->tile_ownership_status = NULL;
+    board->board_unit_positions = NULL;
+    board->board_unit_uvs = NULL;
+    board->board_unit_colors = NULL;
     board->board_outline_vertices = NULL;
     board->board_outline_indices = NULL;
     board->board_border_positions = NULL;
@@ -243,65 +300,13 @@ Board *board_create(int dimension_x, int dimension_y)
         board_destroy(board);
         return NULL;
     }
-    memset(board->board_border_positions, 0, sizeof(float) * 12 * board->board_borders_count);
+
     board->board_border_uvs = malloc(sizeof(float) * 12 * board->board_borders_count);
     if (board->board_border_uvs == NULL)
     {
         printf("Error allocating board_border_uvs\n");
         board_destroy(board);
         return NULL;
-    }
-    memset(board->board_border_uvs, 0, sizeof(float) * 12 * board->board_borders_count);
-    int index = 0;
-    for (int i = 0; i < dimension_x * dimension_y; i++)
-    {
-        if (board->tile_ownership_status[i] != 0)
-        {
-            int x = i % dimension_x;
-            int y = i / dimension_x;
-            int bottom = i + dimension_x;
-            int bottom_left = i + (i % 2 == 0 ? -1 : dimension_x - 1);
-            int bottom_right = i + (i % 2 == 0 ? 1 : dimension_x + 1);
-            int top = i - dimension_x;
-            int top_left = i - (i % 2 == 0 ? dimension_x + 1 : 1);
-            int top_right = i - (i % 2 == 0 ? dimension_x - 1 : -1);
-            if (bottom > 0 && bottom < dimension_x * dimension_y &&
-                board->tile_ownership_status[bottom] != board->tile_ownership_status[i])
-            {
-                board_set_tile_border_vertices(board, x, y, 0, index);
-                index += 12;
-            }
-            if (bottom_left > 0 && bottom_left < dimension_x * dimension_y &&
-                board->tile_ownership_status[bottom_left] != board->tile_ownership_status[i])
-            {
-                board_set_tile_border_vertices(board, x, y, 1, index);
-                index += 12;
-            }
-            if (bottom_right > 0 && bottom_right < dimension_x * dimension_y &&
-                board->tile_ownership_status[bottom_right] != board->tile_ownership_status[i])
-            {
-                board_set_tile_border_vertices(board, x, y, 2, index);
-                index += 12;
-            }
-            if (top > 0 && top < dimension_x * dimension_y &&
-                board->tile_ownership_status[top] != board->tile_ownership_status[i])
-            {
-                board_set_tile_border_vertices(board, x, y, 3, index);
-                index += 12;
-            }
-            if (top_left > 0 && top_left < dimension_x * dimension_y &&
-                board->tile_ownership_status[top_left] != board->tile_ownership_status[i])
-            {
-                board_set_tile_border_vertices(board, x, y, 4, index);
-                index += 12;
-            }
-            if (top_right > 0 && top_right < dimension_x * dimension_y &&
-                board->tile_ownership_status[top_right] != board->tile_ownership_status[i])
-            {
-                board_set_tile_border_vertices(board, x, y, 5, index);
-                index += 12;
-            }
-        }
     }
 
     board->board_border_colors = malloc(sizeof(float) * 24 * board->board_borders_count);
@@ -311,13 +316,7 @@ Board *board_create(int dimension_x, int dimension_y)
         board_destroy(board);
         return NULL;
     }
-    for (int i = 0; i < 6 * board->board_borders_count; i++)
-    {
-        board->board_border_colors[i * 4] = 0.7f;
-        board->board_border_colors[i * 4 + 1] = 0.0f;
-        board->board_border_colors[i * 4 + 2] = 0.0f;
-        board->board_border_colors[i * 4 + 3] = 1.0f;
-    }
+    board_update_border(board);
 
     // Allocate memory for all tiles on board
     // TODO: do this a smarter way
@@ -616,6 +615,72 @@ void board_update_fill_vertices(Board *board)
     }
 }
 
+void board_update_border(Board *board)
+{
+    int dimension_x = board->board_dimension_x;
+    int dimension_y = board->board_dimension_y;
+    memset(board->board_border_positions, 0, sizeof(float) * 12 * board->board_borders_count);
+    memset(board->board_border_uvs, 0, sizeof(float) * 12 * board->board_borders_count);
+    memset(board->board_border_colors, 0, sizeof(float) * 24 * board->board_borders_count);
+    int index = 0;
+    for (int i = 0; i < dimension_x * dimension_y; i++)
+    {
+        if (board->tile_ownership_status[i] == 0)
+        {
+            continue;
+        }
+        int x = i % dimension_x;
+        int y = i / dimension_x;
+        int bottom = i + dimension_x;
+        int bottom_left = i + (x % 2 == 0 ? -1 : dimension_x - 1);
+        int bottom_right = i + (x % 2 == 0 ? 1 : dimension_x + 1);
+        int top = i - dimension_x;
+        int top_left = i - (x % 2 == 0 ? dimension_x + 1 : 1);
+        int top_right = i - (x % 2 == 0 ? dimension_x - 1 : -1);
+        if (bottom >= dimension_x * dimension_y ||
+            board->tile_ownership_status[bottom] != board->tile_ownership_status[i])
+        {
+            board_set_tile_border_vertices(board, x, y, 0, index);
+            index += 12;
+        }
+        if (x == 0 || bottom_left < 0 || bottom_left >= dimension_x * dimension_y ||
+            board->tile_ownership_status[bottom_left] != board->tile_ownership_status[i])
+        {
+            board_set_tile_border_vertices(board, x, y, 1, index);
+            index += 12;
+        }
+        if (x == dimension_x - 1 || bottom_right < 0 || bottom_right >= dimension_x * dimension_y ||
+            board->tile_ownership_status[bottom_right] != board->tile_ownership_status[i])
+        {
+            board_set_tile_border_vertices(board, x, y, 2, index);
+            index += 12;
+        }
+        if (top < 0 || board->tile_ownership_status[top] != board->tile_ownership_status[i])
+        {
+            board_set_tile_border_vertices(board, x, y, 3, index);
+            index += 12;
+        }
+        if (x == 0 || top_left < 0 || top_left >= dimension_x * dimension_y ||
+            board->tile_ownership_status[top_left] != board->tile_ownership_status[i])
+        {
+            board_set_tile_border_vertices(board, x, y, 4, index);
+            index += 12;
+        }
+        if (x == dimension_x - 1 || top_right < 0 || top_right >= dimension_x * dimension_y ||
+            board->tile_ownership_status[top_right] != board->tile_ownership_status[i])
+        {
+            board_set_tile_border_vertices(board, x, y, 5, index);
+            index += 12;
+        }
+    }
+    board->board_borders_count = index / 12;
+}
+
+void board_update_unit_position(Board *board, int unit_index, int tile_x, int tile_y)
+{
+    memset(board->board_unit_positions + unit_index, 0, 12);
+}
+
 void board_clear(Board *board)
 {
     board->board_dimension_x = 0;
@@ -634,6 +699,14 @@ void board_clear(Board *board)
     board->board_fill_colors = NULL;
     free(board->tile_occupation_status);
     board->tile_occupation_status = NULL;
+    free(board->tile_ownership_status);
+    board->tile_ownership_status = NULL;
+    free(board->board_unit_positions);
+    board->board_unit_positions = NULL;
+    free(board->board_unit_uvs);
+    board->board_unit_uvs = NULL;
+    free(board->board_unit_colors);
+    board->board_unit_colors = NULL;
     free(board->board_outline_vertices);
     board->board_outline_vertices = NULL;
     free(board->board_outline_indices);

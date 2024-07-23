@@ -34,6 +34,10 @@ vec3 *camera_get_position();
 
 void camera_set_position(const vec3 position);
 
+void camera_set_max_position(const vec2 position);
+
+void camera_set_min_position(const vec2 position);
+
 mat4 *camera_get_projection();
 
 mat4 *camera_get_view();

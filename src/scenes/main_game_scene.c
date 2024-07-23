@@ -25,8 +25,11 @@ static Shader board_fill_program = {0};
 static unsigned int board_fill_id = 0;
 static Texture board_texture = {0};
 
-double g_mouse_pos_x = 0.0;
-double g_mouse_pos_y = 0.0;
+static double g_mouse_pos_x = 0.0;
+static double g_mouse_pos_y = 0.0;
+
+static bool g_scroll_enabled = false;
+static bool g_movement_enabled = false;
 
 void main_game_scene_glfw_framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
@@ -47,9 +50,12 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         break;
     }
     case GLFW_KEY_W: {
+        if (!g_movement_enabled)
+        {
+            break;
+        }
         if (action == GLFW_PRESS)
         {
-            board_update_hovered_tile(current_board, -1.0f, -1.0f);
             camera_set_moving_up(true);
         }
         else if (action == GLFW_RELEASE)
@@ -59,9 +65,12 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         break;
     }
     case GLFW_KEY_S: {
+        if (!g_movement_enabled)
+        {
+            break;
+        }
         if (action == GLFW_PRESS)
         {
-            board_update_hovered_tile(current_board, -1.0f, -1.0f);
             camera_set_moving_down(true);
         }
         else if (action == GLFW_RELEASE)
@@ -71,9 +80,12 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         break;
     }
     case GLFW_KEY_A: {
+        if (!g_movement_enabled)
+        {
+            break;
+        }
         if (action == GLFW_PRESS)
         {
-            board_update_hovered_tile(current_board, -1.0f, -1.0f);
             camera_set_moving_left(true);
         }
         else if (action == GLFW_RELEASE)
@@ -83,14 +95,55 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         break;
     }
     case GLFW_KEY_D: {
+        if (!g_movement_enabled)
+        {
+            break;
+        }
         if (action == GLFW_PRESS)
         {
-            board_update_hovered_tile(current_board, -1.0f, -1.0f);
             camera_set_moving_right(true);
         }
         else if (action == GLFW_RELEASE)
         {
             camera_set_moving_right(false);
+        }
+        break;
+    }
+    case GLFW_KEY_R: {
+        if (action == GLFW_PRESS)
+        {
+            float board_width =
+                BOARD_HEX_TILE_WIDTH * current_board->board_dimension_x * 0.75 + BOARD_HEX_TILE_WIDTH / 4.0f;
+            float board_height =
+                BOARD_HEX_TILE_HEIGHT * current_board->board_dimension_y + BOARD_HEX_TILE_HEIGHT / 2.0f;
+            vec3 position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
+                             ((float)camera_get_viewport_height() - board_height) / -2.0f, 2.0f};
+            camera_set_position(position);
+            camera_set_zoom(146.0f);
+        }
+        break;
+    }
+    case GLFW_KEY_ENTER: {
+        if (action == GLFW_PRESS)
+        {
+            if (current_board->selected_tile_index_x >= 0 && current_board->selected_tile_index_y >= 0)
+            {
+                current_board
+                    ->tile_ownership_status[current_board->selected_tile_index_y * current_board->board_dimension_x +
+                                            current_board->selected_tile_index_x]++;
+                if (current_board->tile_ownership_status[current_board->selected_tile_index_y *
+                                                             current_board->board_dimension_x +
+                                                         current_board->selected_tile_index_x] > 4)
+                {
+                    current_board->tile_ownership_status[current_board->selected_tile_index_y *
+                                                             current_board->board_dimension_x +
+                                                         current_board->selected_tile_index_x] = 0;
+                }
+                board_update_border(current_board);
+                basic_update_vertex_data(board_borders_id, current_board->board_border_positions,
+                                         current_board->board_border_uvs, current_board->board_border_colors,
+                                         current_board->board_borders_count * 6);
+            }
         }
         break;
     }
@@ -115,14 +168,18 @@ void main_game_scene_glfw_mouse_button_callback(GLFWwindow *window, int button, 
 
 void main_game_scene_glfw_scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
-    camera_decrement_zoom((float)yoffset);
-    if (camera_get_zoom() < 55.0f)
+    if (!g_scroll_enabled)
     {
-        camera_set_zoom(55.0f);
+        return;
     }
-    else if (camera_get_zoom() > 125.0f)
+    camera_decrement_zoom((float)yoffset);
+    if (camera_get_zoom() < 85.0f)
     {
-        camera_set_zoom(125.0f);
+        camera_set_zoom(85.0f);
+    }
+    else if (camera_get_zoom() > 160.0f)
+    {
+        camera_set_zoom(160.0f);
     }
 }
 
@@ -141,6 +198,14 @@ void main_game_scene_update_hovered_tile()
     float modified_y_pos = (bottom - top) - (pos_nds[1] + a) / (a * 2.0f) * (bottom - top);
     board_update_hovered_tile(current_board, modified_x_pos + (*camera_get_position())[0] + left,
                               modified_y_pos + (*camera_get_position())[1] + top);
+}
+
+void main_game_scene_save()
+{
+}
+
+void main_game_scene_load()
+{
 }
 
 void main_game_scene_init()
@@ -168,6 +233,18 @@ void main_game_scene_init()
     current_board = board;
 
     board_texture = generate_opengl_texture("../resources/textures/hex/hex_borders.png");
+
+    float board_width = BOARD_HEX_TILE_WIDTH * current_board->board_dimension_x * 0.75 + BOARD_HEX_TILE_WIDTH / 4.0f;
+    float board_height = BOARD_HEX_TILE_HEIGHT * current_board->board_dimension_y + BOARD_HEX_TILE_HEIGHT / 2.0f;
+    vec3 position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
+                     ((float)camera_get_viewport_height() - board_height) / -2.0f, 2.0f};
+    camera_set_position(position);
+    vec2 max_position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
+                         board_height / 2.0f - BOARD_HEX_TILE_HEIGHT / 2.0f};
+    camera_set_max_position(max_position);
+    vec2 min_position = {((float)camera_get_viewport_width() - board_width) / -2.0f, 0.0f};
+    camera_set_min_position(min_position);
+    camera_set_zoom(155.0f);
 }
 
 void main_game_scene_update()
@@ -198,13 +275,35 @@ void main_game_scene_render()
     basic_draw_arrays(board_borders_id, board_borders_program.program, GL_TRIANGLES);
     omega_nuklear_start();
     struct nk_context *ctx = omega_nuklear_get_nuklear_context();
-    if (nk_begin(ctx, "Debug", nk_rect(50, 50, 350, 250),
-                 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
+    if (nk_begin(ctx, "Debug", nk_rect(0.0f, 0.0f, (float)camera_get_viewport_width(), 28), NK_WINDOW_NO_SCROLLBAR))
     {
-        nk_layout_row_static(ctx, 60, 350, 1);
-        char mouse_pos_str[100];
-        sprintf(mouse_pos_str, "Mouse Position: %.2lf, %.2lf", g_mouse_pos_x, g_mouse_pos_y);
-        nk_label(ctx, mouse_pos_str, NK_TEXT_ALIGN_LEFT);
+        nk_menubar_begin(ctx);
+        nk_layout_row_begin(ctx, NK_STATIC, 25, 1);
+        nk_layout_row_push(ctx, 45);
+        if (nk_menu_begin_label(ctx, "File", NK_TEXT_CENTERED, nk_vec2(120, 200)))
+        {
+            nk_layout_row_dynamic(ctx, 25, 1);
+            if (nk_menu_item_label(ctx, "Save", NK_TEXT_LEFT))
+            {
+                main_game_scene_save();
+            }
+            if (nk_menu_item_label(ctx, "Load", NK_TEXT_LEFT))
+            {
+                main_game_scene_load();
+            }
+            if (nk_menu_item_label(ctx, "Exit", NK_TEXT_LEFT))
+            {
+                platform_set_window_should_close(true);
+            }
+            nk_menu_end(ctx);
+        }
+        nk_menubar_end(ctx);
+        /*
+                nk_layout_row_static(ctx, 60, 350, 1);
+                char mouse_pos_str[100];
+                sprintf(mouse_pos_str, "Mouse Position: %.2lf, %.2lf", g_mouse_pos_x, g_mouse_pos_y);
+                nk_label(ctx, mouse_pos_str, NK_TEXT_ALIGN_LEFT);
+        */
     }
     omega_nuklear_end();
 }

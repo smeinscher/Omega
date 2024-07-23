@@ -30,6 +30,10 @@ typedef struct Board
     int *tile_occupation_status;
     int *tile_ownership_status;
 
+    float *board_unit_positions;
+    float *board_unit_uvs;
+    float *board_unit_colors;
+
     float *board_outline_vertices;
     unsigned int *board_outline_indices;
     float *board_border_positions;
@@ -46,6 +50,8 @@ void board_update_hovered_tile(Board *board, float mouse_board_pos_x, float mous
 void board_update_fill_vertices(Board *board);
 
 void board_update_border(Board *board);
+
+void board_update_unit_position(Board *board, int unit_index, int tile_x, int tile_y);
 
 void board_clear(Board *board);
 

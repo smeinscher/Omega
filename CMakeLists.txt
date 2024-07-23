@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 11)
 
 find_package(glfw3 CONFIG REQUIRED)
 find_package(cglm CONFIG REQUIRED)
+find_package(json-c CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 
 add_executable(OmegaCradle src/main.c)
@@ -46,6 +47,7 @@ target_link_libraries(OmegaApp
         PRIVATE
         cglm::cglm
         glfw
+        json-c::json-c
         ${OPENGL_LIBRARIES}
 )
 
