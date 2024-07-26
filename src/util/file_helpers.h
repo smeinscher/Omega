@@ -7,6 +7,8 @@
 
 char *read_file(const char *file_path, long *file_size);
 
+int write_file(const char *file_path, const char *data, unsigned long size);
+
 int copy_file(const char *file_path, const char *output_file_path);
 
 struct timespec get_file_timestamp(const char *path);

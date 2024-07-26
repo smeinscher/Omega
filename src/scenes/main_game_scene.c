@@ -12,6 +12,7 @@
 #include "../renderer/opengl_texture.h"
 #include "../ui/nuklear_config.h"
 #include "scene_state.h"
+#include "../util/file_helpers.h"
 
 #include <stdbool.h>
 
@@ -23,13 +24,18 @@ static Shader board_borders_program = {0};
 static unsigned int board_borders_id = 0;
 static Shader board_fill_program = {0};
 static unsigned int board_fill_id = 0;
+static Shader board_unit_program = {0};
+static unsigned int board_unit_id = 0;
 static Texture board_texture = {0};
+static Texture unit_texture = {0};
 
 static double g_mouse_pos_x = 0.0;
 static double g_mouse_pos_y = 0.0;
 
 static bool g_scroll_enabled = false;
 static bool g_movement_enabled = false;
+
+#define SAVE_MAX_BUFFER_SIZE 2048
 
 void main_game_scene_glfw_framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
@@ -132,11 +138,11 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
                     ->tile_ownership_status[current_board->selected_tile_index_y * current_board->board_dimension_x +
                                             current_board->selected_tile_index_x]++;
                 if (current_board->tile_ownership_status[current_board->selected_tile_index_y *
-                                                             current_board->board_dimension_x +
+                                                         current_board->board_dimension_x +
                                                          current_board->selected_tile_index_x] > 4)
                 {
                     current_board->tile_ownership_status[current_board->selected_tile_index_y *
-                                                             current_board->board_dimension_x +
+                                                         current_board->board_dimension_x +
                                                          current_board->selected_tile_index_x] = 0;
                 }
                 board_update_border(current_board);
@@ -202,10 +208,55 @@ void main_game_scene_update_hovered_tile()
 
 void main_game_scene_save()
 {
+    char *buffer = malloc(sizeof(char) * SAVE_MAX_BUFFER_SIZE);
+    int buffer_index = 0;
+    for (int i = 0; i < current_board->board_dimension_x * current_board->board_dimension_y; i++)
+    {
+        if (buffer_index >= SAVE_MAX_BUFFER_SIZE - 1)
+        {
+            // TODO: logging stuff
+            printf("Game save failed. Buffer size too small.\n");
+            free(buffer);
+            return;
+        }
+        int size_written = sprintf(buffer + buffer_index, "%d,", current_board->tile_ownership_status[i]);
+        buffer_index += size_written;
+    }
+    buffer[buffer_index] = ';';
+    write_file("../save/save.omg", buffer, SAVE_MAX_BUFFER_SIZE);
+    free(buffer);
 }
 
 void main_game_scene_load()
 {
+    long file_size;
+    char *file_buffer = read_file("../save/save.omg", &file_size);
+    char *int_buffer = malloc(sizeof(char) * 10);
+    int int_buffer_index = 0;
+    int tile_ownership_status_index = 0;
+    for (int i = 0; i < file_size; i++)
+    {
+        if (file_buffer[i] == ';')
+        {
+            break;
+        }
+        if (file_buffer[i] == ',')
+        {
+            current_board->tile_ownership_status[tile_ownership_status_index++] = atoi(int_buffer);
+            free(int_buffer);
+            int_buffer = malloc(sizeof(char) * 10);
+            int_buffer_index = 0;
+            continue;
+        }
+        int_buffer[int_buffer_index++] = file_buffer[i];
+
+    }
+    free(file_buffer);
+    free(int_buffer);
+    board_update_border(current_board);
+    basic_update_vertex_data(board_borders_id, current_board->board_border_positions,
+                             current_board->board_border_uvs, current_board->board_border_colors,
+                             current_board->board_borders_count * 6);
 }
 
 void main_game_scene_init()
@@ -213,7 +264,7 @@ void main_game_scene_init()
     platform_set_callbacks(main_game_scene_glfw_framebuffer_size_callback, main_game_scene_glfw_key_callback,
                            main_game_scene_glfw_cursor_position_callback, main_game_scene_glfw_mouse_button_callback,
                            main_game_scene_glfw_scroll_callback);
-    Board *board = board_create(21, 21);
+    Board *board = board_create(21, 11);
     board_outline_program =
         opengl_load_basic_shaders("../resources/shaders/board_outline.vert", "../resources/shaders/board_outline.frag");
     board_outline_id = basic_vertex_data_create(
@@ -230,21 +281,29 @@ void main_game_scene_init()
     board_fill_id = basic_vertex_data_create(board->board_fill_positions, 2, NULL, board->board_fill_colors,
                                              board->board_dimension_y * board->board_dimension_x * 12, NULL, 0, 0);
 
+    board_unit_program =
+        opengl_load_basic_shaders("../resources/shaders/board_borders.vert", "../resources/shaders/board_borders.frag");
+    board_unit_id = basic_vertex_data_create(board->board_unit_positions, 2, board->board_unit_uvs,
+                                             board->board_unit_colors, board->unit_count * 6, NULL, 0, 0);
+
     current_board = board;
 
     board_texture = generate_opengl_texture("../resources/textures/hex/hex_borders.png");
+
+    unit_texture = generate_opengl_texture("../resources/textures/ship/spaceships.png");
 
     float board_width = BOARD_HEX_TILE_WIDTH * current_board->board_dimension_x * 0.75 + BOARD_HEX_TILE_WIDTH / 4.0f;
     float board_height = BOARD_HEX_TILE_HEIGHT * current_board->board_dimension_y + BOARD_HEX_TILE_HEIGHT / 2.0f;
     vec3 position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
                      ((float)camera_get_viewport_height() - board_height) / -2.0f, 2.0f};
     camera_set_position(position);
-    vec2 max_position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
+    /*vec2 max_position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
                          board_height / 2.0f - BOARD_HEX_TILE_HEIGHT / 2.0f};
     camera_set_max_position(max_position);
     vec2 min_position = {((float)camera_get_viewport_width() - board_width) / -2.0f, 0.0f};
-    camera_set_min_position(min_position);
-    camera_set_zoom(155.0f);
+    camera_set_min_position(min_position);*/
+    // camera_set_zoom(155.0f);
+    camera_set_zoom(125.0f);
 }
 
 void main_game_scene_update()
@@ -259,26 +318,32 @@ void main_game_scene_render()
     opengl_shader_hot_reload(&board_outline_program);
     opengl_shader_hot_reload(&board_borders_program);
     opengl_shader_hot_reload(&board_fill_program);
-    glBindTexture(GL_TEXTURE_2D, board_texture.id);
     opengl_set_uniform_mat4(board_borders_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(board_borders_program.program, "projection", (vec4 *)camera_get_projection());
     opengl_set_uniform_mat4(board_outline_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(board_outline_program.program, "projection", (vec4 *)camera_get_projection());
     opengl_set_uniform_mat4(board_fill_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(board_fill_program.program, "projection", (vec4 *)camera_get_projection());
+    opengl_set_uniform_mat4(board_unit_program.program, "view", (vec4 *)camera_get_view());
+    opengl_set_uniform_mat4(board_unit_program.program, "projection", (vec4 *)camera_get_projection());
     board_update_fill_vertices(current_board);
+    glBindTexture(GL_TEXTURE_2D, board_texture.id);
     basic_update_vertex_data(board_fill_id, current_board->board_fill_positions, NULL, current_board->board_fill_colors,
                              12 * current_board->board_dimension_x * current_board->board_dimension_y);
     basic_draw_elements(board_outline_id, board_outline_program.program, GL_LINES);
     // basic_draw_arrays_instanced(board_borders_id, board_borders_program.program, 21 * 21);
     basic_draw_arrays(board_fill_id, board_fill_program.program, GL_TRIANGLES);
     basic_draw_arrays(board_borders_id, board_borders_program.program, GL_TRIANGLES);
+    glBindTexture(GL_TEXTURE_2D, unit_texture.id);
+    basic_update_vertex_data(board_unit_id, current_board->board_unit_positions, current_board->board_unit_uvs,
+                             current_board->board_unit_colors, 6 * current_board->unit_count);
+    basic_draw_arrays(board_unit_id, board_unit_program.program, GL_TRIANGLES);
     omega_nuklear_start();
     struct nk_context *ctx = omega_nuklear_get_nuklear_context();
-    if (nk_begin(ctx, "Debug", nk_rect(0.0f, 0.0f, (float)camera_get_viewport_width(), 28), NK_WINDOW_NO_SCROLLBAR))
+    if (nk_begin(ctx, "Menu Bar", nk_rect(0.0f, 0.0f, (float)camera_get_viewport_width(), 28), NK_WINDOW_NO_SCROLLBAR))
     {
         nk_menubar_begin(ctx);
-        nk_layout_row_begin(ctx, NK_STATIC, 25, 1);
+        nk_layout_row_begin(ctx, NK_STATIC, 25, 2);
         nk_layout_row_push(ctx, 45);
         if (nk_menu_begin_label(ctx, "File", NK_TEXT_CENTERED, nk_vec2(120, 200)))
         {
@@ -297,6 +362,12 @@ void main_game_scene_render()
             }
             nk_menu_end(ctx);
         }
+        nk_layout_row_push(ctx, 250);
+        char camera_pos_str[100];
+        sprintf(camera_pos_str, "Camera Position: %.2lf, %.2lf", (*camera_get_position())[0],
+                (*camera_get_position())[1]);
+        nk_label(ctx, camera_pos_str, NK_TEXT_ALIGN_CENTERED);
+
         nk_menubar_end(ctx);
         /*
                 nk_layout_row_static(ctx, 60, 350, 1);

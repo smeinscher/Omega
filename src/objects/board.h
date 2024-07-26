@@ -24,12 +24,15 @@ typedef struct Board
 
     int board_borders_count;
 
+    int unit_count;
+
     int *selected_tiles;
     float *board_fill_positions;
     float *board_fill_colors;
     int *tile_occupation_status;
     int *tile_ownership_status;
 
+    int *board_unit_owner;
     float *board_unit_positions;
     float *board_unit_uvs;
     float *board_unit_colors;
@@ -51,7 +54,7 @@ void board_update_fill_vertices(Board *board);
 
 void board_update_border(Board *board);
 
-void board_update_unit_position(Board *board, int unit_index, int tile_x, int tile_y);
+void board_update_unit_position(Board *board, int unit_index, int x, int y);
 
 void board_clear(Board *board);
 

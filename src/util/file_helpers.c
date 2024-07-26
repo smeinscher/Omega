@@ -12,7 +12,7 @@ char *read_file(const char *file_path, long *file_size)
 {
     *file_size = 0;
     FILE *file = fopen(file_path, "rb");
-    if (!file)
+    if (file == NULL)
     {
         // TODO: logging stuff
         printf("Error opening file %s\n", file_path);
@@ -24,7 +24,7 @@ char *read_file(const char *file_path, long *file_size)
     fseek(file, 0, SEEK_SET);
 
     char *buffer = malloc(sizeof(char) * (*file_size + 1));
-    if (!buffer)
+    if (buffer == NULL)
     {
         printf("Error allocating memory\n");
         return NULL;
@@ -35,13 +35,33 @@ char *read_file(const char *file_path, long *file_size)
     return buffer;
 }
 
+int write_file(const char *file_path, const char *data, const unsigned long size)
+{
+    FILE *output_file = fopen(file_path, "wb");
+    if (output_file == NULL)
+    {
+        // TODO: logging stuff
+        printf("Error opening output file %s\n", file_path);
+        return -1;
+    }
+
+    unsigned long result = fwrite(data, sizeof(char), size, output_file);
+    fclose(output_file);
+    if (result != size)
+    {
+        printf("Error writing to output file %s\n", file_path);
+        return -1;
+    }
+    return 0;
+}
+
 int copy_file(const char *file_path, const char *output_file_path)
 {
     long file_size = 0;
     char *data = read_file(file_path, &file_size);
 
     FILE *output_file = fopen(output_file_path, "wb");
-    if (!output_file)
+    if (output_file == NULL)
     {
         // TODO: logging stuff
         printf("Error opening output file %s\n", output_file_path);
