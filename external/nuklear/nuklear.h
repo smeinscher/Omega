@@ -1750,7 +1750,7 @@ NK_API struct nk_command_buffer* nk_window_get_canvas(struct nk_context*);
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
-/// void nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y);
+/// void nk_window_get_scroll(struct nk_context *ctx, nk_uint *g_health_bar_offset_x, nk_uint *g_health_bar_offset_y);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter    | Description
@@ -1932,7 +1932,7 @@ NK_API void nk_window_set_focus(struct nk_context*, const char *name);
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
-/// void nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y);
+/// void nk_window_set_scroll(struct nk_context *ctx, nk_uint g_health_bar_offset_x, nk_uint g_health_bar_offset_y);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter    | Description

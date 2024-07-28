@@ -11,8 +11,8 @@
 #include "../renderer/opengl_shader.h"
 #include "../renderer/opengl_texture.h"
 #include "../ui/nuklear_config.h"
-#include "scene_state.h"
 #include "../util/file_helpers.h"
+#include "scene_state.h"
 
 #include <stdbool.h>
 
@@ -26,14 +26,19 @@ static Shader board_fill_program = {0};
 static unsigned int board_fill_id = 0;
 static Shader board_unit_program = {0};
 static unsigned int board_unit_id = 0;
+static Shader board_unit_health_bar_program = {0};
+static unsigned int board_unit_health_bar_id;
 static Texture board_texture = {0};
 static Texture unit_texture = {0};
+static Texture health_bar_texture = {0};
 
 static double g_mouse_pos_x = 0.0;
 static double g_mouse_pos_y = 0.0;
 
 static bool g_scroll_enabled = false;
 static bool g_movement_enabled = false;
+
+static bool g_exit_program = false;
 
 #define SAVE_MAX_BUFFER_SIZE 2048
 
@@ -49,8 +54,6 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
     case GLFW_KEY_ESCAPE: {
         if (action == GLFW_PRESS)
         {
-            board_update_hovered_tile(current_board, -1.0f, -1.0f);
-            // glfwSetWindowShouldClose(window, true);
             scene_set(MAIN_MENU);
         }
         break;
@@ -138,17 +141,14 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
                     ->tile_ownership_status[current_board->selected_tile_index_y * current_board->board_dimension_x +
                                             current_board->selected_tile_index_x]++;
                 if (current_board->tile_ownership_status[current_board->selected_tile_index_y *
-                                                         current_board->board_dimension_x +
+                                                             current_board->board_dimension_x +
                                                          current_board->selected_tile_index_x] > 4)
                 {
                     current_board->tile_ownership_status[current_board->selected_tile_index_y *
-                                                         current_board->board_dimension_x +
+                                                             current_board->board_dimension_x +
                                                          current_board->selected_tile_index_x] = 0;
                 }
-                board_update_border(current_board);
-                basic_update_vertex_data(board_borders_id, current_board->board_border_positions,
-                                         current_board->board_border_uvs, current_board->board_border_colors,
-                                         current_board->board_borders_count * 6);
+                current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
             }
         }
         break;
@@ -249,14 +249,20 @@ void main_game_scene_load()
             continue;
         }
         int_buffer[int_buffer_index++] = file_buffer[i];
-
     }
     free(file_buffer);
     free(int_buffer);
     board_update_border(current_board);
-    basic_update_vertex_data(board_borders_id, current_board->board_border_positions,
-                             current_board->board_border_uvs, current_board->board_border_colors,
-                             current_board->board_borders_count * 6);
+    basic_update_vertex_data(board_borders_id, current_board->board_border_positions, current_board->board_border_uvs,
+                             current_board->board_border_colors, current_board->board_borders_count * 6);
+}
+
+void main_game_scene_reset_board()
+{
+    board_reset(&current_board);
+    board_update_border(current_board);
+    basic_update_vertex_data(board_borders_id, current_board->board_border_positions, current_board->board_border_uvs,
+                             current_board->board_border_colors, current_board->board_borders_count * 6);
 }
 
 void main_game_scene_init()
@@ -268,7 +274,8 @@ void main_game_scene_init()
     board_outline_program =
         opengl_load_basic_shaders("../resources/shaders/board_outline.vert", "../resources/shaders/board_outline.frag");
     board_outline_id = basic_vertex_data_create(
-        board->board_outline_vertices, 2, NULL, NULL, board->board_dimension_y * (board->board_dimension_x * 2 + 2) * 2,
+        board->board_outline_vertices, 2, NULL, NULL,
+        board->board_dimension_y * (board->board_dimension_x * 2 + 2) + (board->board_dimension_x * 2 + 1),
         board->board_outline_indices, board->board_dimension_x * board->board_dimension_y * 12, 0);
 
     board_borders_program =
@@ -284,7 +291,13 @@ void main_game_scene_init()
     board_unit_program =
         opengl_load_basic_shaders("../resources/shaders/board_borders.vert", "../resources/shaders/board_borders.frag");
     board_unit_id = basic_vertex_data_create(board->board_unit_positions, 2, board->board_unit_uvs,
-                                             board->board_unit_colors, board->unit_count * 6, NULL, 0, 0);
+                                             board->board_unit_colors, board->unit_buffer_size * 6, NULL, 0, 0);
+
+    board_unit_health_bar_program =
+        opengl_load_basic_shaders("../resources/shaders/health_bar.vert", "../resources/shaders/health_bar.frag");
+    board_unit_health_bar_id =
+        basic_vertex_data_create(board->board_unit_health_positions, 2, board->board_unit_health_uvs,
+                                 board->board_unit_health_colors, board->unit_buffer_size * 6, NULL, 0, 0);
 
     current_board = board;
 
@@ -292,10 +305,20 @@ void main_game_scene_init()
 
     unit_texture = generate_opengl_texture("../resources/textures/ship/spaceships.png");
 
+    health_bar_texture = generate_opengl_texture("../resources/textures/status_bars/white_square.png");
+
+    camera_set_zoom(115.0f);
     float board_width = BOARD_HEX_TILE_WIDTH * current_board->board_dimension_x * 0.75 + BOARD_HEX_TILE_WIDTH / 4.0f;
     float board_height = BOARD_HEX_TILE_HEIGHT * current_board->board_dimension_y + BOARD_HEX_TILE_HEIGHT / 2.0f;
-    vec3 position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
-                     ((float)camera_get_viewport_height() - board_height) / -2.0f, 2.0f};
+
+    float left = (float)camera_get_viewport_width() - (float)camera_get_viewport_width() / camera_get_zoom_ratio();
+    float top = (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
+    vec3 position = {
+        ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - (float)camera_get_viewport_width()) -
+            ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
+        (float)camera_get_viewport_height() / camera_get_zoom_ratio() - (float)camera_get_viewport_height() -
+            ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
+        2.0f};
     camera_set_position(position);
     /*vec2 max_position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
                          board_height / 2.0f - BOARD_HEX_TILE_HEIGHT / 2.0f};
@@ -303,17 +326,26 @@ void main_game_scene_init()
     vec2 min_position = {((float)camera_get_viewport_width() - board_width) / -2.0f, 0.0f};
     camera_set_min_position(min_position);*/
     // camera_set_zoom(155.0f);
-    camera_set_zoom(125.0f);
 }
 
 void main_game_scene_update()
 {
+    if (g_exit_program)
+    {
+        main_game_scene_clean();
+        platform_set_window_should_close(true);
+        return;
+    }
     camera_update();
     main_game_scene_update_hovered_tile();
 }
 
 void main_game_scene_render()
 {
+    if (g_exit_program)
+    {
+        return;
+    }
     opengl_texture_hot_reload(&board_texture);
     opengl_shader_hot_reload(&board_outline_program);
     opengl_shader_hot_reload(&board_borders_program);
@@ -326,21 +358,48 @@ void main_game_scene_render()
     opengl_set_uniform_mat4(board_fill_program.program, "projection", (vec4 *)camera_get_projection());
     opengl_set_uniform_mat4(board_unit_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(board_unit_program.program, "projection", (vec4 *)camera_get_projection());
-    board_update_fill_vertices(current_board);
+    opengl_set_uniform_mat4(board_unit_health_bar_program.program, "view", (vec4 *)camera_get_view());
+    opengl_set_uniform_mat4(board_unit_health_bar_program.program, "projection", (vec4 *)camera_get_projection());
+
+    if (current_board->board_update_flags & BOARD_UPDATE_FILL)
+    {
+        board_update_fill_vertices(current_board);
+        basic_update_vertex_data(board_fill_id, current_board->board_fill_positions, NULL,
+                                 current_board->board_fill_colors,
+                                 current_board->board_dimension_x * current_board->board_dimension_y * 12);
+    }
+    if (current_board->board_update_flags & BOARD_UPDATE_BORDERS)
+    {
+        board_update_border(current_board);
+        basic_update_vertex_data(board_borders_id, current_board->board_border_positions,
+                                 current_board->board_border_uvs, current_board->board_border_colors,
+                                 current_board->board_borders_count * 6);
+    }
+    if (current_board->board_update_flags & BOARD_UPDATE_UNIT)
+    {
+        basic_update_vertex_data(board_unit_id, current_board->board_unit_positions, current_board->board_unit_uvs,
+                                 current_board->board_unit_colors, current_board->unit_buffer_size * 6);
+    }
+    if (current_board->board_update_flags & BOARD_UPDATE_UNIT_HEALTH)
+    {
+        basic_update_vertex_data(board_unit_health_bar_id, current_board->board_unit_health_positions,
+                                 current_board->board_unit_health_uvs, current_board->board_unit_health_colors,
+                                 current_board->unit_buffer_size * 6);
+    }
     glBindTexture(GL_TEXTURE_2D, board_texture.id);
-    basic_update_vertex_data(board_fill_id, current_board->board_fill_positions, NULL, current_board->board_fill_colors,
-                             12 * current_board->board_dimension_x * current_board->board_dimension_y);
     basic_draw_elements(board_outline_id, board_outline_program.program, GL_LINES);
     // basic_draw_arrays_instanced(board_borders_id, board_borders_program.program, 21 * 21);
     basic_draw_arrays(board_fill_id, board_fill_program.program, GL_TRIANGLES);
     basic_draw_arrays(board_borders_id, board_borders_program.program, GL_TRIANGLES);
     glBindTexture(GL_TEXTURE_2D, unit_texture.id);
-    basic_update_vertex_data(board_unit_id, current_board->board_unit_positions, current_board->board_unit_uvs,
-                             current_board->board_unit_colors, 6 * current_board->unit_count);
     basic_draw_arrays(board_unit_id, board_unit_program.program, GL_TRIANGLES);
+    glBindTexture(GL_TEXTURE_2D, health_bar_texture.id);
+    basic_draw_arrays(board_unit_health_bar_id, board_unit_health_bar_program.program, GL_TRIANGLES);
+    current_board->board_update_flags = 0;
     omega_nuklear_start();
     struct nk_context *ctx = omega_nuklear_get_nuklear_context();
-    if (nk_begin(ctx, "Menu Bar", nk_rect(0.0f, 0.0f, (float)camera_get_viewport_width(), 28), NK_WINDOW_NO_SCROLLBAR))
+    if (nk_begin(ctx, "Menu Bar", nk_rect(0.0f, 0.0f, (float)camera_get_viewport_width(), 28.0f),
+                 NK_WINDOW_NO_SCROLLBAR))
     {
         nk_menubar_begin(ctx);
         nk_layout_row_begin(ctx, NK_STATIC, 25, 2);
@@ -356,19 +415,18 @@ void main_game_scene_render()
             {
                 main_game_scene_load();
             }
+            if (nk_menu_item_label(ctx, "Reset", NK_TEXT_LEFT))
+            {
+                main_game_scene_reset_board();
+            }
             if (nk_menu_item_label(ctx, "Exit", NK_TEXT_LEFT))
             {
-                platform_set_window_should_close(true);
+                g_exit_program = true;
             }
             nk_menu_end(ctx);
         }
-        nk_layout_row_push(ctx, 250);
-        char camera_pos_str[100];
-        sprintf(camera_pos_str, "Camera Position: %.2lf, %.2lf", (*camera_get_position())[0],
-                (*camera_get_position())[1]);
-        nk_label(ctx, camera_pos_str, NK_TEXT_ALIGN_CENTERED);
-
         nk_menubar_end(ctx);
+
         /*
                 nk_layout_row_static(ctx, 60, 350, 1);
                 char mouse_pos_str[100];
@@ -376,6 +434,32 @@ void main_game_scene_render()
                 nk_label(ctx, mouse_pos_str, NK_TEXT_ALIGN_LEFT);
         */
     }
+    nk_end(ctx);
+    if (nk_begin(ctx, "Board Information", nk_rect(50.0f, 50.0f, 200.0f, 400.0f),
+                 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
+    {
+        nk_layout_row_static(ctx, 30, 190, 1);
+        char board_info_buffer[1000];
+        sprintf(board_info_buffer, "Occupied Tiles: ");
+        int buffer_index = 16;
+        for (int i = 0; i < current_board->board_dimension_x * current_board->board_dimension_y; i++)
+        {
+            if (current_board->tile_occupation_status[i] != -1)
+            {
+                buffer_index += sprintf(board_info_buffer + buffer_index, "%d; ", i);
+            }
+        }
+        nk_label(ctx, board_info_buffer, NK_TEXT_LEFT);
+        char board_current_tile_buffer[50];
+        sprintf(board_current_tile_buffer, "Current Tile Position: %d, %d", current_board->mouse_tile_index_x,
+                current_board->mouse_tile_index_y);
+        nk_label(ctx, board_current_tile_buffer, NK_TEXT_LEFT);
+        char camera_position_buffer[50];
+        sprintf(camera_position_buffer, "Camera Position: %.2f, %.2f", (*camera_get_position())[0],
+                (*camera_get_position())[1]);
+        nk_label(ctx, camera_position_buffer, NK_TEXT_LEFT);
+    }
+    nk_end(ctx);
     omega_nuklear_end();
 }
 

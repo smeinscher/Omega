@@ -41,7 +41,9 @@ add_library(OmegaApp SHARED
         src/util/file_helpers.c
         src/util/file_helpers.h
         src/game/loader.c
-        src/game/loader.h)
+        src/game/loader.h
+        src/util/dynamic_array.c
+        src/util/dynamic_array.h)
 
 target_link_libraries(OmegaApp
         PRIVATE

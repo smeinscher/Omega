@@ -43,7 +43,7 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
         printf("Reached max number of vertex data (%d)", OMEGA_GAME_MAX_VERTEX_DATA_COUNT);
         return 0;
     }
-    BasicVertexData vertex_data;
+    BasicVertexData vertex_data = {0};
     vertex_data.positions = positions;
     vertex_data.dimensions = dimensions;
     vertex_data.uvs = uvs;
@@ -64,10 +64,6 @@ unsigned int basic_vertex_data_create(float *positions, unsigned int dimensions,
     if (indices_count > 0)
     {
         glGenBuffers(1, &vertex_data.ebo);
-    }
-    else
-    {
-        vertex_data.ebo = 0;
     }
 
     unsigned int gl_usage;

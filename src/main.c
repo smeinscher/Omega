@@ -17,7 +17,7 @@ void (*g_game_render_func_ptr)(void) = game_render;
 
 void (*g_game_shutdown_func_ptr)(void) = game_shutdown;
 
-static void *game_dl;
+static void *game_dl = NULL;
 static struct timespec last_edit_ts = {0};
 
 void *hot_reload_thread(void *vargp)

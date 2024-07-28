@@ -9,8 +9,8 @@ static int g_viewport_width = 1280;
 static int g_viewport_height = 720;
 
 static vec3 g_camera_position = {0.0f, 0.0f, 2.0f};
-static vec2 g_max_camera_position = {FLT_MAX, FLT_MAX};
-static vec2 g_min_camera_position = {FLT_MIN, FLT_MIN};
+static vec2 g_max_camera_position = {INFINITY, INFINITY};
+static vec2 g_min_camera_position = {-INFINITY, -INFINITY};
 
 static bool g_camera_moving_up = false;
 static bool g_camera_moving_down = false;

@@ -39,6 +39,7 @@ void main_menu_scene_render()
             scene_set(MAIN_GAME);
         }
     }
+    nk_end(ctx);
     omega_nuklear_end();
 }
 

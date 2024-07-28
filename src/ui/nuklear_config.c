@@ -80,7 +80,6 @@ void omega_nuklear_start()
 
 void omega_nuklear_end()
 {
-    nk_end(g_ctx);
     nk_glfw3_render(&g_glfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 
     opengl_enable_default_attributes();
