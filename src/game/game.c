@@ -44,6 +44,10 @@ void game_reload(void *game_dl)
 
 void game_update()
 {
+    if (scene_needs_init())
+    {
+        scene_init();
+    }
     platform_poll_events();
     double current_update_time = platform_get_time();
     double elapsed_time = current_update_time - previous_update_time;

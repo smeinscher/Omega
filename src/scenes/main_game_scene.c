@@ -119,16 +119,49 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         break;
     }
     case GLFW_KEY_R: {
+        if (current_board->mouse_tile_index_x == -1 || current_board->mouse_tile_index_y == -1)
+        {
+            break;
+        }
         if (action == GLFW_PRESS)
         {
-            float board_width =
-                BOARD_HEX_TILE_WIDTH * current_board->board_dimension_x * 0.75 + BOARD_HEX_TILE_WIDTH / 4.0f;
-            float board_height =
-                BOARD_HEX_TILE_HEIGHT * current_board->board_dimension_y + BOARD_HEX_TILE_HEIGHT / 2.0f;
-            vec3 position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
-                             ((float)camera_get_viewport_height() - board_height) / -2.0f, 2.0f};
-            camera_set_position(position);
-            camera_set_zoom(146.0f);
+            int unit_index =
+                current_board
+                    ->tile_occupation_status[current_board->mouse_tile_index_y * current_board->board_dimension_x +
+                                             current_board->mouse_tile_index_x];
+            if (unit_index != -1)
+            {
+                int *new_owner = &current_board->board_unit_owner[unit_index];
+                (*new_owner)++;
+                if (*new_owner > 4)
+                {
+                    *new_owner = 1;
+                }
+                board_update_unit_color(current_board, unit_index);
+            }
+        }
+        break;
+    }
+    case GLFW_KEY_E: {
+        if (current_board->mouse_tile_index_x == -1 || current_board->mouse_tile_index_y == -1)
+        {
+            break;
+        }
+        if (action == GLFW_PRESS)
+        {
+            int unit_index =
+                current_board
+                    ->tile_occupation_status[current_board->mouse_tile_index_y * current_board->board_dimension_x +
+                                             current_board->mouse_tile_index_x];
+            if (unit_index == -1)
+            {
+                board_add_unit(current_board, 1, current_board->mouse_tile_index_x, current_board->mouse_tile_index_y);
+            }
+            else
+            {
+                board_remove_unit(current_board, unit_index, current_board->mouse_tile_index_x,
+                                  current_board->mouse_tile_index_y);
+            }
         }
         break;
     }

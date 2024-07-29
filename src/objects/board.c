@@ -213,7 +213,6 @@ void board_realloc_int(int **int_ptr, size_t size)
         return;
     }
     *int_ptr = temp_int_ptr;
-    temp_int_ptr = NULL;
 }
 
 void board_realloc_float(float **float_ptr, size_t size)
@@ -225,33 +224,74 @@ void board_realloc_float(float **float_ptr, size_t size)
         return;
     }
     *float_ptr = temp_float_ptr;
-    temp_float_ptr = NULL;
 }
 
 void board_add_unit(Board *board, int owner, int x, int y)
 {
     int new_unit_index;
-    if (board->board_freed_unit_indices.used != 0)
+    if (board->board_freed_unit_indices.used == 0)
     {
-        new_unit_index = da_int_pop_front(&board->board_freed_unit_indices);
+        new_unit_index = board->unit_buffer_size++;
+        if (board->unit_buffer_size > 1)
+        {
+            board_realloc_int(&board->board_unit_owner, board->unit_buffer_size);
+            board_realloc_float(&board->board_unit_health, board->unit_buffer_size);
+            board_realloc_float(&board->board_unit_positions, board->unit_buffer_size * 12);
+            board_realloc_float(&board->board_unit_uvs, board->unit_buffer_size * 12);
+            board_realloc_float(&board->board_unit_colors, board->unit_buffer_size * 24);
+            board_realloc_float(&board->board_unit_health_positions, board->unit_buffer_size * 12);
+            board_realloc_float(&board->board_unit_health_uvs, board->unit_buffer_size * 12);
+            board_realloc_float(&board->board_unit_health_colors, board->unit_buffer_size * 24);
+        }
     }
     else
     {
-        new_unit_index = board->unit_buffer_size++;
-        board_realloc_int(&board->board_unit_owner, board->unit_buffer_size);
-        board_realloc_float(&board->board_unit_health, board->unit_buffer_size);
-        board_realloc_float(&board->board_unit_positions, board->unit_buffer_size * 12);
-        board_realloc_float(&board->board_unit_uvs, board->unit_buffer_size * 12);
-        board_realloc_float(&board->board_unit_colors, board->unit_buffer_size * 24);
-        board_realloc_float(&board->board_unit_health_positions, board->unit_buffer_size * 12);
-        board_realloc_float(&board->board_unit_health_uvs, board->unit_buffer_size * 12);
-        board_realloc_float(&board->board_unit_health_colors, board->unit_buffer_size * 24);
+        new_unit_index = da_int_pop_front(&board->board_freed_unit_indices);
     }
 
     board->tile_occupation_status[y * board->board_dimension_x + x] = new_unit_index;
     board->board_unit_owner[new_unit_index] = owner;
     board->board_unit_health[new_unit_index] = 100.0f;
 
+    board_update_unit_position(board, new_unit_index, x, y);
+
+    board_update_unit_health(board, new_unit_index);
+
+    board->board_unit_uvs[new_unit_index * 12] = 2.0f / 4.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 1] = 1.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 2] = 3.0f / 4.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 3] = 0.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 4] = 2.0f / 4.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 5] = 0.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 6] = 2.0f / 4.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 7] = 1.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 8] = 3.0f / 4.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 9] = 0.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 10] = 3.0f / 4.0f;
+    board->board_unit_uvs[new_unit_index * 12 + 11] = 1.0f;
+
+    board->board_unit_health_uvs[new_unit_index * 12] = 0.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 1] = 1.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 2] = 1.0f / 4.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 3] = 0.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 4] = 0.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 5] = 0.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 6] = 0.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 7] = 1.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 8] = 1.0f / 4.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 9] = 0.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 10] = 1.0f / 4.0f;
+    board->board_unit_health_uvs[new_unit_index * 12 + 11] = 1.0f;
+
+    board_update_unit_color(board, new_unit_index);
+
+    for (int j = 0; j < 6; j++)
+    {
+        board->board_unit_health_colors[new_unit_index * 24 + j * 4] = 1.0f;
+        board->board_unit_health_colors[new_unit_index * 24 + j * 4 + 1] = 0.0f;
+        board->board_unit_health_colors[new_unit_index * 24 + j * 4 + 2] = 1.0f;
+        board->board_unit_health_colors[new_unit_index * 24 + j * 4 + 3] = 1.0f;
+    }
     board->board_update_flags |= BOARD_UPDATE_UNIT | BOARD_UPDATE_UNIT_HEALTH;
 }
 
@@ -277,20 +317,10 @@ void board_set_tile_occupation(Board *board)
     {
         board->tile_occupation_status[i] = -1;
     }
-    board->tile_occupation_status[1] = 0;
-    board->tile_occupation_status[board->board_dimension_x * (board->board_dimension_y - 1) + 1] = 1;
-    board->tile_occupation_status[board->board_dimension_x - 2] = 2;
-    board->tile_occupation_status[board->board_dimension_x * board->board_dimension_y - 2] = 3;
-
-    board->board_unit_owner[0] = 1;
-    board->board_unit_owner[1] = 2;
-    board->board_unit_owner[2] = 3;
-    board->board_unit_owner[3] = 4;
-
-    for (int i = 0; i < board->unit_buffer_size; i++)
-    {
-        board->board_unit_health[i] = 100.0f;
-    }
+    board_add_unit(board, 1, 1, 0);
+    board_add_unit(board, 2, 1, board->board_dimension_y - 1);
+    board_add_unit(board, 3, board->board_dimension_x - 2, 0);
+    board_add_unit(board, 4, board->board_dimension_x - 2, board->board_dimension_y - 1);
 }
 
 void board_set_tile_ownership(Board *board)
@@ -324,7 +354,7 @@ void board_set_tile_ownership(Board *board)
     board->tile_ownership_status[board->board_dimension_y * board->board_dimension_x - 2] = 4;
     board->tile_ownership_status[board->board_dimension_y * board->board_dimension_x - 1] = 4;
 
-    board->board_borders_count = sizeof(int) * board->board_dimension_x * board->board_dimension_y;
+    board->board_borders_count = board->board_dimension_x * board->board_dimension_y * 6;
 }
 
 // TODO: Error checking for malloc
@@ -346,6 +376,7 @@ Board *board_create(int dimension_x, int dimension_y)
     board->selected_tile_index_y = -1;
     board->board_borders_count = 0;
     board->unit_buffer_size = 0;
+    board->board_update_flags = 0;
     board->selected_tiles = NULL;
     board->board_fill_positions = NULL;
     board->board_fill_colors = NULL;
@@ -365,6 +396,8 @@ Board *board_create(int dimension_x, int dimension_y)
     board->board_border_uvs = NULL;
     board->board_border_colors = NULL;
 
+    da_int_init(&board->board_freed_unit_indices, 4);
+
     board->tile_occupation_status = malloc(sizeof(int) * dimension_x * dimension_y);
     if (board->tile_occupation_status == NULL)
     {
@@ -372,22 +405,21 @@ Board *board_create(int dimension_x, int dimension_y)
         board_destroy(board);
         return NULL;
     }
-    board->unit_buffer_size = 4;
-    board->board_unit_owner = malloc(sizeof(int) * board->unit_buffer_size);
+    board->unit_buffer_size = 0;
+    board->board_unit_owner = malloc(sizeof(int));
     if (board->board_unit_owner == NULL)
     {
         printf("Error allocating board_unit_owner\n");
         board_destroy(board);
         return NULL;
     }
-    board->board_unit_health = malloc(sizeof(float) * board->unit_buffer_size);
+    board->board_unit_health = malloc(sizeof(float));
     if (board->board_unit_health == NULL)
     {
         printf("Error allocating board_unit_health\n");
         board_destroy(board);
         return NULL;
     }
-    board_set_tile_occupation(board);
     board->tile_ownership_status = malloc(sizeof(int) * dimension_x * dimension_y);
     if (board->tile_ownership_status == NULL)
     {
@@ -466,7 +498,7 @@ Board *board_create(int dimension_x, int dimension_y)
     }
     memset(board->board_fill_colors, 0, sizeof(float) * num_vertices * 4);
 
-    board->board_unit_positions = malloc(sizeof(float) * board->unit_buffer_size * 12);
+    board->board_unit_positions = malloc(sizeof(float) * 12);
     if (board->board_unit_positions == NULL)
     {
         printf("Error allocating board_unit_positions\n");
@@ -474,7 +506,7 @@ Board *board_create(int dimension_x, int dimension_y)
         return NULL;
     }
 
-    board->board_unit_uvs = malloc(sizeof(float) * board->unit_buffer_size * 12);
+    board->board_unit_uvs = malloc(sizeof(float) * 12);
     if (board->board_unit_uvs == NULL)
     {
         printf("Error allocating board_unit_uvs\n");
@@ -482,7 +514,7 @@ Board *board_create(int dimension_x, int dimension_y)
         return NULL;
     }
 
-    board->board_unit_colors = malloc(sizeof(float) * board->unit_buffer_size * 24);
+    board->board_unit_colors = malloc(sizeof(float) * 24);
     if (board->board_unit_colors == NULL)
     {
         printf("Error allocating board_unit_colors\n");
@@ -490,7 +522,7 @@ Board *board_create(int dimension_x, int dimension_y)
         return NULL;
     }
 
-    board->board_unit_health_positions = malloc(sizeof(float) * board->unit_buffer_size * 12);
+    board->board_unit_health_positions = malloc(sizeof(float) * 12);
     if (board->board_unit_health_positions == NULL)
     {
         printf("Error allocating board_unit_health_positions\n");
@@ -498,7 +530,7 @@ Board *board_create(int dimension_x, int dimension_y)
         return NULL;
     }
 
-    board->board_unit_health_uvs = malloc(sizeof(float) * board->unit_buffer_size * 12);
+    board->board_unit_health_uvs = malloc(sizeof(float) * 12);
     if (board->board_unit_health_uvs == NULL)
     {
         printf("Error allocating board_unit_health_uvs\n");
@@ -506,7 +538,7 @@ Board *board_create(int dimension_x, int dimension_y)
         return NULL;
     }
 
-    board->board_unit_health_colors = malloc(sizeof(float) * board->unit_buffer_size * 24);
+    board->board_unit_health_colors = malloc(sizeof(float) * 24);
     if (board->board_unit_health_colors == NULL)
     {
         printf("Error allocating board_unit_health_colors\n");
@@ -514,128 +546,7 @@ Board *board_create(int dimension_x, int dimension_y)
         return NULL;
     }
 
-    for (int i = 0; i < dimension_x * dimension_y; i++)
-    {
-        int board_unit_index = board->tile_occupation_status[i];
-        int x = i % dimension_x;
-        int y = i / dimension_x;
-        if (board_unit_index != -1)
-        {
-            board->board_unit_positions[board_unit_index * 12] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
-            board->board_unit_positions[board_unit_index * 12 + 1] = (float)y * BOARD_HEX_TILE_HEIGHT +
-                                                                     (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f +
-                                                                     BOARD_HEX_TILE_HEIGHT;
-            board->board_unit_positions[board_unit_index * 12 + 2] =
-                (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
-            board->board_unit_positions[board_unit_index * 12 + 3] =
-                (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
-            board->board_unit_positions[board_unit_index * 12 + 4] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
-            board->board_unit_positions[board_unit_index * 12 + 5] =
-                (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
-            board->board_unit_positions[board_unit_index * 12 + 6] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
-            board->board_unit_positions[board_unit_index * 12 + 7] = (float)y * BOARD_HEX_TILE_HEIGHT +
-                                                                     (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f +
-                                                                     BOARD_HEX_TILE_HEIGHT;
-            board->board_unit_positions[board_unit_index * 12 + 8] =
-                (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
-            board->board_unit_positions[board_unit_index * 12 + 9] =
-                (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
-            board->board_unit_positions[board_unit_index * 12 + 10] =
-                (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
-            board->board_unit_positions[board_unit_index * 12 + 11] = (float)y * BOARD_HEX_TILE_HEIGHT +
-                                                                      (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f +
-                                                                      BOARD_HEX_TILE_HEIGHT;
-
-            board->board_unit_health_positions[board_unit_index * 12] =
-                board->board_unit_positions[board_unit_index * 12] + g_health_bar_offset_x;
-            board->board_unit_health_positions[board_unit_index * 12 + 1] =
-                board->board_unit_positions[board_unit_index * 12 + 3] + g_health_bar_offset_y + g_health_bar_size_y;
-            board->board_unit_health_positions[board_unit_index * 12 + 2] =
-                board->board_unit_positions[board_unit_index * 12] + g_health_bar_offset_x + g_health_bar_size_x;
-            board->board_unit_health_positions[board_unit_index * 12 + 3] =
-                board->board_unit_positions[board_unit_index * 12 + 3] + g_health_bar_offset_y;
-            board->board_unit_health_positions[board_unit_index * 12 + 4] =
-                board->board_unit_positions[board_unit_index * 12] + g_health_bar_offset_x;
-            board->board_unit_health_positions[board_unit_index * 12 + 5] =
-                board->board_unit_positions[board_unit_index * 12 + 3] + g_health_bar_offset_y;
-            board->board_unit_health_positions[board_unit_index * 12 + 6] =
-                board->board_unit_positions[board_unit_index * 12] + g_health_bar_offset_x;
-            board->board_unit_health_positions[board_unit_index * 12 + 7] =
-                board->board_unit_positions[board_unit_index * 12 + 3] + g_health_bar_offset_y + g_health_bar_size_y;
-            board->board_unit_health_positions[board_unit_index * 12 + 8] =
-                board->board_unit_positions[board_unit_index * 12] + g_health_bar_offset_x + g_health_bar_size_x;
-            board->board_unit_health_positions[board_unit_index * 12 + 9] =
-                board->board_unit_positions[board_unit_index * 12 + 3] + g_health_bar_offset_y;
-            board->board_unit_health_positions[board_unit_index * 12 + 10] =
-                board->board_unit_positions[board_unit_index * 12] + g_health_bar_offset_x + g_health_bar_size_x;
-            board->board_unit_health_positions[board_unit_index * 12 + 11] =
-                board->board_unit_positions[board_unit_index * 12 + 3] + g_health_bar_offset_y + g_health_bar_size_y;
-
-            board->board_unit_uvs[board_unit_index * 12] = 0.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 1] = 1.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 2] = 1.0f / 4.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 3] = 0.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 4] = 0.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 5] = 0.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 6] = 0.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 7] = 1.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 8] = 1.0f / 4.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 9] = 0.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 10] = 1.0f / 4.0f;
-            board->board_unit_uvs[board_unit_index * 12 + 11] = 1.0f;
-
-            board->board_unit_health_uvs[board_unit_index * 12] = 0.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 1] = 1.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 2] = 1.0f / 4.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 3] = 0.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 4] = 0.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 5] = 0.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 6] = 0.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 7] = 1.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 8] = 1.0f / 4.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 9] = 0.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 10] = 1.0f / 4.0f;
-            board->board_unit_health_uvs[board_unit_index * 12 + 11] = 1.0f;
-
-            float color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-            switch (board->board_unit_owner[board_unit_index])
-            {
-            case 1:
-                color[0] = 0.7f;
-                break;
-            case 2:
-                color[1] = 0.7f;
-                break;
-            case 3:
-                color[1] = 0.7f;
-                color[2] = 0.7f;
-                break;
-            case 4:
-                color[0] = 0.7f;
-                color[1] = 0.7f;
-                break;
-            default:
-                break;
-            }
-            for (int j = 0; j < 6; j++)
-            {
-                board->board_unit_colors[board_unit_index * 24 + j * 4] = color[0];
-                board->board_unit_colors[board_unit_index * 24 + j * 4 + 1] = color[1];
-                board->board_unit_colors[board_unit_index * 24 + j * 4 + 2] = color[2];
-                board->board_unit_colors[board_unit_index * 24 + j * 4 + 3] = color[3];
-            }
-
-            for (int j = 0; j < 6; j++)
-            {
-                board->board_unit_health_colors[board_unit_index * 24 + j * 4] = 1.0f;
-                board->board_unit_health_colors[board_unit_index * 24 + j * 4 + 1] = 0.0f;
-                board->board_unit_health_colors[board_unit_index * 24 + j * 4 + 2] = 1.0f;
-                board->board_unit_health_colors[board_unit_index * 24 + j * 4 + 3] = 1.0f;
-            }
-        }
-    }
-
-    da_int_init(&board->board_freed_unit_indices, board->unit_buffer_size);
+    board_set_tile_occupation(board);
 
     return board;
 }
@@ -1119,6 +1030,39 @@ void board_update_unit_position(Board *board, int unit_index, int x, int y)
         (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
 
     board_update_unit_health(board, unit_index);
+
+    board->board_update_flags |= BOARD_UPDATE_UNIT;
+}
+
+void board_update_unit_color(Board *board, int unit_index)
+{
+    float color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    switch (board->board_unit_owner[unit_index])
+    {
+    case 1:
+        color[0] = 0.7f;
+        break;
+    case 2:
+        color[1] = 0.7f;
+        break;
+    case 3:
+        color[1] = 0.7f;
+        color[2] = 0.7f;
+        break;
+    case 4:
+        color[0] = 0.7f;
+        color[1] = 0.7f;
+        break;
+    default:
+        break;
+    }
+    for (int j = 0; j < 6; j++)
+    {
+        board->board_unit_colors[unit_index * 24 + j * 4] = color[0];
+        board->board_unit_colors[unit_index * 24 + j * 4 + 1] = color[1];
+        board->board_unit_colors[unit_index * 24 + j * 4 + 2] = color[2];
+        board->board_unit_colors[unit_index * 24 + j * 4 + 3] = color[3];
+    }
 
     board->board_update_flags |= BOARD_UPDATE_UNIT;
 }

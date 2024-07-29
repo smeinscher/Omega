@@ -48,27 +48,6 @@ int platform_create_window(int width, int height, const char *title)
     return 0;
 }
 
-int platform_create_share_window(const char *title)
-{
-    g_loading_window = glfwCreateWindow(0, 0, title, NULL, g_main_window);
-    if (g_loading_window == NULL)
-    {
-        printf("Failed to create window with shared context with main window\n");
-        return -1;
-    }
-    return 0;
-}
-
-void switch_to_main_context()
-{
-    glfwMakeContextCurrent(g_main_window);
-}
-
-void switch_to_loading_context()
-{
-    glfwMakeContextCurrent(g_loading_window);
-}
-
 void platform_set_callbacks(void *framebuffer_size, void *key, void *cursor_pos, void *mouse_button, void *scroll)
 {
     glfwSetFramebufferSizeCallback(g_main_window, framebuffer_size);
@@ -99,11 +78,6 @@ void platform_swap_buffers()
     glfwSwapBuffers(g_main_window);
 }
 
-void platform_swap_buffers_loading()
-{
-    glfwSwapBuffers(g_loading_window);
-}
-
 void platform_poll_events()
 {
     glfwPollEvents();
@@ -112,11 +86,6 @@ void platform_poll_events()
 void platform_destroy_window()
 {
     glfwDestroyWindow(g_main_window);
-}
-
-void platform_destroy_loading_window()
-{
-    glfwDestroyWindow(g_loading_window);
 }
 
 void platform_clean()
