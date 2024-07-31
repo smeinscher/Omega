@@ -128,7 +128,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                        g_current_board->board_dimension_x +
+                                                                    g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index != -1)
             {
@@ -152,11 +152,12 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                        g_current_board->board_dimension_x +
+                                                                    g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index == -1)
             {
-                unit_add(g_current_board->units, 1, g_current_board->mouse_tile_index_x,
+                unit_add(g_current_board->units, g_current_board->board_current_turn % 4 + 1,
+                         g_current_board->mouse_tile_index_x,
                          g_current_board->mouse_tile_index_y, g_current_board->board_dimension_x);
             }
             else
@@ -173,14 +174,14 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
             if (g_current_board->selected_tile_index_x >= 0 && g_current_board->selected_tile_index_y >= 0)
             {
                 g_current_board->tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                           g_current_board->board_dimension_x +
+                                                       g_current_board->board_dimension_x +
                                                        g_current_board->selected_tile_index_x]++;
                 if (g_current_board->tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                               g_current_board->board_dimension_x +
+                                                           g_current_board->board_dimension_x +
                                                            g_current_board->selected_tile_index_x] > 4)
                 {
                     g_current_board->tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                               g_current_board->board_dimension_x +
+                                                           g_current_board->board_dimension_x +
                                                            g_current_board->selected_tile_index_x] = 0;
                 }
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
@@ -590,9 +591,9 @@ void main_game_scene_init()
     float top = (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
     vec3 position = {
         ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - (float)camera_get_viewport_width()) -
-            ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
+        ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
         (float)camera_get_viewport_height() / camera_get_zoom_ratio() - (float)camera_get_viewport_height() -
-            ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
+        ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
         2.0f};
     camera_set_position(position);
     /*vec2 max_position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
@@ -707,7 +708,7 @@ void main_game_scene_render()
             nk_layout_row_dynamic(ctx, 25, 1);
             if (nk_menu_item_label(ctx, "Next Turn", NK_TEXT_LEFT))
             {
-                // TODO: go to next turn
+                board_process_turn(g_current_board);
             }
             nk_menu_end(ctx);
         }

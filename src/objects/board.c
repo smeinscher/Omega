@@ -14,6 +14,7 @@ static float selected_tile_color[4] = {0.2f, 0.7f, 0.9f, 0.3f};
 static float highlighted_tile_color[4] = {0.2f, 0.7f, 0.9f, 0.2f};
 static float highlighted_tile_occupied_color[4] = {0.7f, 0.2f, 0.2f, 0.4f};
 static float highlighted_tile_friendly_color[4] = {0.2f, 0.7f, 0.2f, 0.4f};
+static float highlighted_tile_ready_color[4] = {0.7f, 0.7f, 0.4f, 0.4f};
 
 static int coords_to_point(int x_pos, int y_pos, int dimension_x, int dimension_y)
 {
@@ -371,70 +372,100 @@ void board_handle_tile_click(Board *board)
         board->selected_point = board->hovered_point;
         board->selected_tile_index_x = board->mouse_tile_index_x;
         board->selected_tile_index_y = board->mouse_tile_index_y;
-        if (board->units->unit_tile_occupation_status[board->selected_tile_index_y * board->board_dimension_x +
-                                                      board->selected_tile_index_x] == -1)
+        int unit_index = board->units->unit_tile_occupation_status[
+            board->selected_tile_index_y * board->board_dimension_x + board->selected_tile_index_x];
+        if (unit_index == -1 || board->units->unit_owner[unit_index] != board->board_current_turn % 4 + 1)
         {
             return;
         }
-        // Center
+        // TODO: more complicated movement point stuff
+        if (board->units->unit_movement_points[unit_index] < 1.0f)
+        {
+            // TODO: replace 36 with variable representing max tiles that can be selected
+            for (int i = 0; i < 36; i++)
+            {
+                board->selected_tiles[i] = -1;
+            }
+            return;
+        }
+        // Center Ring
         board->selected_tiles[0] = board->mouse_tile_index_x;
         board->selected_tiles[1] = board->mouse_tile_index_y - 1;
-        board->selected_tiles[2] = board->mouse_tile_index_x;
-        board->selected_tiles[3] = board->mouse_tile_index_y - 2;
-        board->selected_tiles[4] = board->mouse_tile_index_x;
-        board->selected_tiles[5] = board->mouse_tile_index_y + 1;
-        board->selected_tiles[6] = board->mouse_tile_index_x;
-        board->selected_tiles[7] = board->mouse_tile_index_y + 2;
-        // End
-        board->selected_tiles[8] = board->mouse_tile_index_x - 2;
-        board->selected_tiles[9] = board->mouse_tile_index_y;
-        board->selected_tiles[10] = board->mouse_tile_index_x - 2;
-        board->selected_tiles[11] = board->mouse_tile_index_y - 1;
-        board->selected_tiles[12] = board->mouse_tile_index_x - 2;
-        board->selected_tiles[13] = board->mouse_tile_index_y + 1;
-        board->selected_tiles[14] = board->mouse_tile_index_x + 2;
-        board->selected_tiles[15] = board->mouse_tile_index_y;
-        board->selected_tiles[16] = board->mouse_tile_index_x + 2;
-        board->selected_tiles[17] = board->mouse_tile_index_y - 1;
-        board->selected_tiles[18] = board->mouse_tile_index_x + 2;
-        board->selected_tiles[19] = board->mouse_tile_index_y + 1;
-        // Middle
-        board->selected_tiles[20] = board->mouse_tile_index_x - 1;
-        board->selected_tiles[21] = board->mouse_tile_index_y;
-        board->selected_tiles[22] = board->mouse_tile_index_x + 1;
-        board->selected_tiles[23] = board->mouse_tile_index_y;
         if (board->mouse_tile_index_x % 2 == 0)
         {
-            board->selected_tiles[24] = board->mouse_tile_index_x - 1;
-            board->selected_tiles[25] = board->mouse_tile_index_y - 1;
-            board->selected_tiles[26] = board->mouse_tile_index_x - 1;
-            board->selected_tiles[27] = board->mouse_tile_index_y - 2;
-            board->selected_tiles[28] = board->mouse_tile_index_x - 1;
-            board->selected_tiles[29] = board->mouse_tile_index_y + 1;
-
-            board->selected_tiles[30] = board->mouse_tile_index_x + 1;
-            board->selected_tiles[31] = board->mouse_tile_index_y - 1;
-            board->selected_tiles[32] = board->mouse_tile_index_x + 1;
-            board->selected_tiles[33] = board->mouse_tile_index_y - 2;
-            board->selected_tiles[34] = board->mouse_tile_index_x + 1;
-            board->selected_tiles[35] = board->mouse_tile_index_y + 1;
+            board->selected_tiles[2] = board->mouse_tile_index_x - 1;
+            board->selected_tiles[3] = board->mouse_tile_index_y - 1;
+            board->selected_tiles[4] = board->mouse_tile_index_x - 1;
+            board->selected_tiles[5] = board->mouse_tile_index_y;
+            board->selected_tiles[8] = board->mouse_tile_index_x + 1;
+            board->selected_tiles[9] = board->mouse_tile_index_y;
+            board->selected_tiles[10] = board->mouse_tile_index_x + 1;
+            board->selected_tiles[11] = board->mouse_tile_index_y - 1;
         }
         else
         {
-            board->selected_tiles[24] = board->mouse_tile_index_x - 1;
-            board->selected_tiles[25] = board->mouse_tile_index_y - 1;
-            board->selected_tiles[26] = board->mouse_tile_index_x - 1;
-            board->selected_tiles[27] = board->mouse_tile_index_y + 1;
-            board->selected_tiles[28] = board->mouse_tile_index_x - 1;
-            board->selected_tiles[29] = board->mouse_tile_index_y + 2;
-
-            board->selected_tiles[30] = board->mouse_tile_index_x + 1;
-            board->selected_tiles[31] = board->mouse_tile_index_y - 1;
-            board->selected_tiles[32] = board->mouse_tile_index_x + 1;
-            board->selected_tiles[33] = board->mouse_tile_index_y + 1;
-            board->selected_tiles[34] = board->mouse_tile_index_x + 1;
-            board->selected_tiles[35] = board->mouse_tile_index_y + 2;
+            board->selected_tiles[2] = board->mouse_tile_index_x - 1;
+            board->selected_tiles[3] = board->mouse_tile_index_y;
+            board->selected_tiles[4] = board->mouse_tile_index_x - 1;
+            board->selected_tiles[5] = board->mouse_tile_index_y + 1;
+            board->selected_tiles[8] = board->mouse_tile_index_x + 1;
+            board->selected_tiles[9] = board->mouse_tile_index_y + 1;
+            board->selected_tiles[10] = board->mouse_tile_index_x + 1;
+            board->selected_tiles[11] = board->mouse_tile_index_y;
         }
+        board->selected_tiles[6] = board->mouse_tile_index_x;
+        board->selected_tiles[7] = board->mouse_tile_index_y + 1;
+
+        // TODO: more complicated movement point stuff
+        if (board->units->unit_movement_points[unit_index] < 2.0f)
+        {
+            // TODO: replace 36 with variable representing max tiles that can be selected
+            for (int i = 12; i < 36; i++)
+            {
+                board->selected_tiles[i] = -1;
+            }
+            return;
+        }
+        // Outer Ring
+        board->selected_tiles[12] = board->mouse_tile_index_x;
+        board->selected_tiles[13] = board->mouse_tile_index_y - 2;
+        if (board->mouse_tile_index_x % 2 == 0)
+        {
+            board->selected_tiles[14] = board->mouse_tile_index_x - 1;
+            board->selected_tiles[15] = board->mouse_tile_index_y - 2;
+            board->selected_tiles[22] = board->mouse_tile_index_x - 1;
+            board->selected_tiles[23] = board->mouse_tile_index_y + 1;
+            board->selected_tiles[26] = board->mouse_tile_index_x + 1;
+            board->selected_tiles[27] = board->mouse_tile_index_y + 1;
+            board->selected_tiles[34] = board->mouse_tile_index_x + 1;
+            board->selected_tiles[35] = board->mouse_tile_index_y - 2;
+        }
+        else
+        {
+            board->selected_tiles[14] = board->mouse_tile_index_x - 1;
+            board->selected_tiles[15] = board->mouse_tile_index_y - 1;
+            board->selected_tiles[22] = board->mouse_tile_index_x - 1;
+            board->selected_tiles[23] = board->mouse_tile_index_y + 2;
+            board->selected_tiles[26] = board->mouse_tile_index_x + 1;
+            board->selected_tiles[27] = board->mouse_tile_index_y + 2;
+            board->selected_tiles[34] = board->mouse_tile_index_x + 1;
+            board->selected_tiles[35] = board->mouse_tile_index_y - 1;
+        }
+        board->selected_tiles[16] = board->mouse_tile_index_x - 2;
+        board->selected_tiles[17] = board->mouse_tile_index_y - 1;
+        board->selected_tiles[18] = board->mouse_tile_index_x - 2;
+        board->selected_tiles[19] = board->mouse_tile_index_y;
+        board->selected_tiles[20] = board->mouse_tile_index_x - 2;
+        board->selected_tiles[21] = board->mouse_tile_index_y + 1;
+        board->selected_tiles[24] = board->mouse_tile_index_x;
+        board->selected_tiles[25] = board->mouse_tile_index_y + 2;
+        board->selected_tiles[28] = board->mouse_tile_index_x + 2;
+        board->selected_tiles[29] = board->mouse_tile_index_y + 1;
+        board->selected_tiles[30] = board->mouse_tile_index_x + 2;
+        board->selected_tiles[31] = board->mouse_tile_index_y;
+        board->selected_tiles[32] = board->mouse_tile_index_x + 2;
+        board->selected_tiles[33] = board->mouse_tile_index_y - 1;
+
     }
     else
     {
@@ -454,14 +485,16 @@ void board_handle_tile_click(Board *board)
                     int board_unit_id = board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
                     int selected_unit_id =
                         board->units
-                            ->unit_tile_occupation_status[board->selected_tile_index_y * board->board_dimension_x +
-                                                          board->selected_tile_index_x];
+                        ->unit_tile_occupation_status[board->selected_tile_index_y * board->board_dimension_x +
+                                                      board->selected_tile_index_x];
                     if (board->units->unit_owner[board_unit_id] == board->units->unit_owner[selected_unit_id])
                     {
                         break;
                     }
                     if (board_unit_id != -1)
                     {
+
+                        board->units->unit_movement_points[unit_index] -= 2.0f;
                         if (!unit_attack(board->units, board_unit_id, x, y, board->board_dimension_x))
                         {
                             if (board->selected_tile_index_x < board->mouse_tile_index_x)
@@ -548,6 +581,14 @@ void board_handle_tile_click(Board *board)
                             board->tile_ownership_status[(y + 1) * board->board_dimension_x + x + 1] =
                                 board->units->unit_owner[unit_index];
                         }
+                    }
+                    if (i < 12)
+                    {
+                        board->units->unit_movement_points[unit_index] -= 1.0f;
+                    }
+                    else
+                    {
+                        board->units->unit_movement_points[unit_index] -= 2.0f;
                     }
                     board->board_update_flags |= BOARD_UPDATE_BORDERS;
                     unit_update_position(board->units, unit_index, x, y);
@@ -684,6 +725,26 @@ void board_update_fill_vertices(Board *board)
         board_add_fill_colors(board->board_fill_colors, hovered_tile_index * 4, hovered_tile_color[0],
                               hovered_tile_color[1], hovered_tile_color[2], hovered_tile_color[3]);
     }
+    for (int i = 0; i < board->board_dimension_x * board->board_dimension_y; i++)
+    {
+        int unit_index = board->units->unit_tile_occupation_status[i];
+        if (unit_index != -1)
+        {
+            if (board->units->unit_movement_points[unit_index] > 0.0f && board->units->unit_owner[unit_index] == board->
+                board_current_turn % 4 + 1)
+            {
+                int x = i % board->board_dimension_x;
+                int y = i / board->board_dimension_x;
+                board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, i * 12 * 2,
+                                        coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
+                                        board->board_dimension_x, board->board_dimension_y);
+                board_add_fill_colors(board->board_fill_colors, i * 12 * 4,
+                                      highlighted_tile_ready_color[0],
+                                      highlighted_tile_ready_color[1], highlighted_tile_ready_color[2],
+                                      highlighted_tile_ready_color[3]);
+            }
+        }
+    }
     if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
         board->selected_tile_index_y < 0 || board->selected_tile_index_y >= board->board_dimension_y)
     {
@@ -739,10 +800,10 @@ void board_update_fill_vertices(Board *board)
                                   highlighted_tile_color[2] * mod_b, mod_a);
         }
         else if (board->units
-                     ->unit_owner[board->units->unit_tile_occupation_status[y * board->board_dimension_x + x]] !=
+                 ->unit_owner[board->units->unit_tile_occupation_status[y * board->board_dimension_x + x]] !=
                  board->units->unit_owner[board->units->unit_tile_occupation_status[board->selected_tile_index_y *
-                                                                                        board->board_dimension_x +
-                                                                                    board->selected_tile_index_x]])
+                     board->board_dimension_x +
+                     board->selected_tile_index_x]])
         {
             board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4,
                                   highlighted_tile_occupied_color[0] * mod_r,
