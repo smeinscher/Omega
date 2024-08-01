@@ -6,6 +6,7 @@
 #define BOARD_H
 
 #include "../util/dynamic_array.h"
+#include "planets.h"
 #include "units.h"
 
 #define BOARD_HEX_TILE_WIDTH 74
@@ -46,11 +47,15 @@ typedef struct Board
     float *board_border_colors;
 
     Units *units;
+
+    Planets *planets;
 } Board;
 
 Board *board_create(int dimension_x, int dimension_y);
 
 void board_reset(Board **board);
+
+void board_reset_new_dimensions(Board **board, int new_board_dimension_x, int new_board_dimension_y);
 
 void board_handle_tile_click(Board *board);
 

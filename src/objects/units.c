@@ -182,8 +182,6 @@ void unit_add(Units *units, int owner, int x, int y, int board_dimension_x)
     unit_update_color(units, new_unit_index);
 
     unit_update_health_color(units, new_unit_index);
-
-    units->unit_update_flags |= UNIT_UPDATE | UNIT_UPDATE_HEALTH;
 }
 
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x)
@@ -244,6 +242,7 @@ void unit_update_position(Units *units, int unit_index, int x, int y)
 
 void unit_update_uv(Units *units, int unit_index)
 {
+    // TODO: replace 4.0f with variable
     units->unit_uvs[unit_index * 12] = 2.0f / 4.0f;
     units->unit_uvs[unit_index * 12 + 1] = 1.0f;
     units->unit_uvs[unit_index * 12 + 2] = 3.0f / 4.0f;
@@ -334,6 +333,7 @@ void unit_update_health_uv(Units *units, int unit_index)
     units->unit_health_uvs[unit_index * 12 + 9] = 0.0f;
     units->unit_health_uvs[unit_index * 12 + 10] = 1.0f / 4.0f;
     units->unit_health_uvs[unit_index * 12 + 11] = 1.0f;
+    units->unit_update_flags |= UNIT_UPDATE_HEALTH;
 }
 
 void unit_update_health_color(Units *units, int unit_index)
@@ -345,6 +345,7 @@ void unit_update_health_color(Units *units, int unit_index)
         units->unit_health_colors[unit_index * 24 + j * 4 + 2] = 1.0f;
         units->unit_health_colors[unit_index * 24 + j * 4 + 3] = 1.0f;
     }
+    units->unit_update_flags |= UNIT_UPDATE_HEALTH;
 }
 
 void units_clear(Units *units)
