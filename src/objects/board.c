@@ -350,6 +350,14 @@ Board *board_create(int dimension_x, int dimension_y)
         return NULL;
     }
 
+    board->planets = planets_create(board->board_dimension_x, board->board_dimension_y);
+    if (board->planets == NULL)
+    {
+        printf("Error creating planets\n");
+        board_destroy(board);
+        return NULL;
+    }
+
     return board;
 }
 
@@ -372,8 +380,9 @@ void board_handle_tile_click(Board *board)
         board->selected_point = board->hovered_point;
         board->selected_tile_index_x = board->mouse_tile_index_x;
         board->selected_tile_index_y = board->mouse_tile_index_y;
-        int unit_index = board->units->unit_tile_occupation_status[
-            board->selected_tile_index_y * board->board_dimension_x + board->selected_tile_index_x];
+        int unit_index =
+            board->units->unit_tile_occupation_status[board->selected_tile_index_y * board->board_dimension_x +
+                                                      board->selected_tile_index_x];
         if (unit_index == -1 || board->units->unit_owner[unit_index] != board->board_current_turn % 4 + 1)
         {
             return;
@@ -465,7 +474,6 @@ void board_handle_tile_click(Board *board)
         board->selected_tiles[31] = board->mouse_tile_index_y;
         board->selected_tiles[32] = board->mouse_tile_index_x + 2;
         board->selected_tiles[33] = board->mouse_tile_index_y - 1;
-
     }
     else
     {
@@ -485,8 +493,8 @@ void board_handle_tile_click(Board *board)
                     int board_unit_id = board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
                     int selected_unit_id =
                         board->units
-                        ->unit_tile_occupation_status[board->selected_tile_index_y * board->board_dimension_x +
-                                                      board->selected_tile_index_x];
+                            ->unit_tile_occupation_status[board->selected_tile_index_y * board->board_dimension_x +
+                                                          board->selected_tile_index_x];
                     if (board->units->unit_owner[board_unit_id] == board->units->unit_owner[selected_unit_id])
                     {
                         break;
@@ -730,16 +738,15 @@ void board_update_fill_vertices(Board *board)
         int unit_index = board->units->unit_tile_occupation_status[i];
         if (unit_index != -1)
         {
-            if (board->units->unit_movement_points[unit_index] > 0.0f && board->units->unit_owner[unit_index] == board->
-                board_current_turn % 4 + 1)
+            if (board->units->unit_movement_points[unit_index] > 0.0f &&
+                board->units->unit_owner[unit_index] == board->board_current_turn % 4 + 1)
             {
                 int x = i % board->board_dimension_x;
                 int y = i / board->board_dimension_x;
                 board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, i * 12 * 2,
                                         coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
                                         board->board_dimension_x, board->board_dimension_y);
-                board_add_fill_colors(board->board_fill_colors, i * 12 * 4,
-                                      highlighted_tile_ready_color[0],
+                board_add_fill_colors(board->board_fill_colors, i * 12 * 4, highlighted_tile_ready_color[0],
                                       highlighted_tile_ready_color[1], highlighted_tile_ready_color[2],
                                       highlighted_tile_ready_color[3]);
             }
@@ -800,10 +807,10 @@ void board_update_fill_vertices(Board *board)
                                   highlighted_tile_color[2] * mod_b, mod_a);
         }
         else if (board->units
-                 ->unit_owner[board->units->unit_tile_occupation_status[y * board->board_dimension_x + x]] !=
+                     ->unit_owner[board->units->unit_tile_occupation_status[y * board->board_dimension_x + x]] !=
                  board->units->unit_owner[board->units->unit_tile_occupation_status[board->selected_tile_index_y *
-                     board->board_dimension_x +
-                     board->selected_tile_index_x]])
+                                                                                        board->board_dimension_x +
+                                                                                    board->selected_tile_index_x]])
         {
             board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4,
                                   highlighted_tile_occupied_color[0] * mod_r,
@@ -893,6 +900,11 @@ void board_process_turn(Board *board)
             board->units->unit_movement_points[i] = 2.0f;
         }
     }
+    // TODO: replace 4 and 3 with player count, player count - 1
+    if (board->board_current_turn % 4 == 3)
+    {
+        planet_orbit(board->planets);
+    }
     board->board_current_turn++;
 }
 
@@ -927,6 +939,8 @@ void board_clear(Board *board)
     board->board_border_colors = NULL;
     units_destroy(board->units);
     board->units = NULL;
+    planets_destroy(board->planets);
+    board->planets = NULL;
 }
 
 void board_destroy(Board *board)

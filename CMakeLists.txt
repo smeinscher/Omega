@@ -47,7 +47,9 @@ add_library(OmegaApp SHARED
         src/objects/units.c
         src/objects/units.h
         src/util/general_helpers.c
-        src/util/general_helpers.h)
+        src/util/general_helpers.h
+        src/objects/planets.c
+        src/objects/planets.h)
 
 target_link_libraries(OmegaApp
         PRIVATE
