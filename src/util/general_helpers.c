@@ -43,7 +43,7 @@ void hex_grid_offset_to_axial(int x, int y, int *q, int *r)
 void hex_grid_get_next(bool clockwise, int distance_from_center, int *q, int *r)
 {
     int s = -(*q) - *r;
-    if (distance_from_center > 1)
+    if (distance_from_center > 0)
     {
         if (!clockwise)
         {
@@ -78,19 +78,6 @@ void hex_grid_get_next(bool clockwise, int distance_from_center, int *q, int *r)
         {
             // TODO: implement this
             printf("Not implemented\n");
-        }
-    }
-    else if (distance_from_center == 1)
-    {
-        if (!clockwise)
-        {
-            *q = *r;
-            *r = s;
-        }
-        else
-        {
-            *r = *q;
-            *q = s;
         }
     }
 }

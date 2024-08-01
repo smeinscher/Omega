@@ -131,7 +131,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                        g_current_board->board_dimension_x +
+                                                                    g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index != -1)
             {
@@ -155,7 +155,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                        g_current_board->board_dimension_x +
+                                                                    g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index == -1)
             {
@@ -171,26 +171,32 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         }
         break;
     }
-    case GLFW_KEY_ENTER: {
+    case GLFW_KEY_Q: {
         if (action == GLFW_PRESS)
         {
             if (g_current_board->selected_tile_index_x >= 0 && g_current_board->selected_tile_index_y >= 0)
             {
                 g_current_board->tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                           g_current_board->board_dimension_x +
+                                                       g_current_board->board_dimension_x +
                                                        g_current_board->selected_tile_index_x]++;
                 if (g_current_board->tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                               g_current_board->board_dimension_x +
+                                                           g_current_board->board_dimension_x +
                                                            g_current_board->selected_tile_index_x] > 4)
                 {
                     g_current_board->tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                               g_current_board->board_dimension_x +
+                                                           g_current_board->board_dimension_x +
                                                            g_current_board->selected_tile_index_x] = 0;
                 }
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
             }
         }
         break;
+    }
+    case GLFW_KEY_ENTER: {
+        if (action == GLFW_PRESS)
+        {
+            board_process_turn(g_current_board);
+        }
     }
     default:
         break;
@@ -228,9 +234,9 @@ void main_game_scene_glfw_mouse_button_callback(GLFWwindow *window, int button, 
                 (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
             vec3 position = {
                 ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - (float)camera_get_viewport_width()) -
-                    ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
+                ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
                 (float)camera_get_viewport_height() / camera_get_zoom_ratio() - (float)camera_get_viewport_height() -
-                    ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
+                ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
                 2.0f};
             camera_set_position(position);
 
@@ -257,9 +263,9 @@ void main_game_scene_glfw_scroll_callback(GLFWwindow *window, double xoffset, do
     {
         camera_set_zoom(85.0f);
     }
-    else if (camera_get_zoom() > 160.0f)
+    else if (camera_get_zoom() > 210.0f)
     {
-        camera_set_zoom(160.0f);
+        camera_set_zoom(210.0f);
     }
 }
 
@@ -339,6 +345,16 @@ void main_game_scene_save()
         return;
     }
     int buffer_index = 0;
+    if (!main_game_scene_write_int_array(buffer, &buffer_index, &g_current_board->board_dimension_x, 1))
+    {
+        free(buffer);
+        return;
+    }
+    if (!main_game_scene_write_int_array(buffer, &buffer_index, &g_current_board->board_dimension_y, 1))
+    {
+        free(buffer);
+        return;
+    }
     if (!main_game_scene_write_int_array(buffer, &buffer_index, g_current_board->tile_ownership_status,
                                          g_current_board->board_dimension_x * g_current_board->board_dimension_y))
     {
@@ -508,6 +524,23 @@ void main_game_scene_load()
     long file_size;
     char *file_buffer = read_file("../save/save.omg", &file_size);
     int file_index = 0;
+    int *saved_board_dimension_x;
+    int *saved_board_dimension_y;
+    if (!main_game_scene_read_int_array(file_buffer, &file_index, &saved_board_dimension_x, 1))
+    {
+        free(file_buffer);
+        return;
+    }
+    if (!main_game_scene_read_int_array(file_buffer, &file_index, &saved_board_dimension_y, 1))
+    {
+        free(file_buffer);
+        return;
+    }
+    if (g_current_board->board_dimension_x != *saved_board_dimension_x || g_current_board->board_dimension_y != *
+        saved_board_dimension_y)
+    {
+        board_reset_new_dimensions(&g_current_board, *saved_board_dimension_x, *saved_board_dimension_y);
+    }
     if (!main_game_scene_read_int_array(file_buffer, &file_index, &g_current_board->tile_ownership_status,
                                         g_current_board->board_dimension_x * g_current_board->board_dimension_y))
     {
@@ -645,9 +678,9 @@ void main_game_scene_init()
     float top = (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
     vec3 position = {
         ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - (float)camera_get_viewport_width()) -
-            ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
+        ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
         (float)camera_get_viewport_height() / camera_get_zoom_ratio() - (float)camera_get_viewport_height() -
-            ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
+        ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
         2.0f};
     camera_set_position(position);
     /*vec2 max_position = {((float)camera_get_viewport_width() - board_width) / -2.0f,

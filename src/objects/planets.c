@@ -28,49 +28,49 @@ Planets *planets_create(int board_dimension_x, int board_dimension_y)
     planets->planet_colors = NULL;
 
     planets->planet_tile_indices = malloc(sizeof(int) * 2);
-    if (!planets->planet_tile_indices)
+    if (planets->planet_tile_indices == NULL)
     {
         printf("Error allocating planet_tile_indices\n");
         planets_destroy(planets);
         return NULL;
     }
     planets->planet_distance_from_sun = malloc(sizeof(int) * 2);
-    if (!planets->planet_distance_from_sun)
+    if (planets->planet_distance_from_sun == NULL)
     {
         printf("Error allocating planet_distance_from_sun\n");
         planets_destroy(planets);
         return NULL;
     }
     planets->planet_type = malloc(sizeof(int));
-    if (!planets->planet_type)
+    if (planets->planet_type == NULL)
     {
         printf("Error allocating planet_type\n");
         planets_destroy(planets);
         return NULL;
     }
     planets->planet_size = malloc(sizeof(float));
-    if (!planets->planet_size)
+    if (planets->planet_size == NULL)
     {
         printf("Error allocating planet_size\n");
         planets_destroy(planets);
         return NULL;
     }
     planets->planet_positions = malloc(sizeof(float) * 12);
-    if (!planets->planet_positions)
+    if (planets->planet_positions == NULL)
     {
         printf("Error allocating planet_positions\n");
         planets_destroy(planets);
         return NULL;
     }
     planets->planet_uvs = malloc(sizeof(float) * 12);
-    if (!planets->planet_uvs)
+    if (planets->planet_uvs == NULL)
     {
         printf("Error allocating planet_uvs\n");
         planets_destroy(planets);
         return NULL;
     }
     planets->planet_colors = malloc(sizeof(float) * 24);
-    if (!planets->planet_colors)
+    if (planets->planet_colors == NULL)
     {
         printf("Error allocating planet_colors\n");
         planets_destroy(planets);
@@ -79,6 +79,9 @@ Planets *planets_create(int board_dimension_x, int board_dimension_y)
 
     planet_add(planets, 0.6f, 3, 0, board_dimension_x / 2, board_dimension_y / 2);
     planet_add(planets, 0.15f, 0, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
+    planet_add(planets, 0.15f, 2, 3, board_dimension_x / 2, board_dimension_y / 2 + 3);
+    planet_add(planets, 0.15f, 4, 5, board_dimension_x / 2 + 5, board_dimension_y / 2);
+    planet_add(planets, 0.15f, 1, 10, board_dimension_x / 2 - 10, board_dimension_y / 2);
 
     return planets;
 }
@@ -102,11 +105,11 @@ void planet_orbit(Planets *planets)
 
 void planet_add(Planets *planets, float size, int type, int distance_from_sun, int x, int y)
 {
-    int new_planet_index;
-    new_planet_index = planets->planet_buffer_size++;
+    int new_planet_index = planets->planet_buffer_size++;
     if (planets->planet_buffer_size > 1)
     {
         realloc_int(&planets->planet_tile_indices, planets->planet_buffer_size * 2);
+        realloc_int(&planets->planet_distance_from_sun, planets->planet_buffer_size);
         realloc_int(&planets->planet_type, planets->planet_buffer_size);
         realloc_float(&planets->planet_size, planets->planet_buffer_size);
         realloc_float(&planets->planet_positions, planets->planet_buffer_size * 12);
@@ -115,6 +118,7 @@ void planet_add(Planets *planets, float size, int type, int distance_from_sun, i
     }
     planets->planet_tile_indices[new_planet_index * 2] = x;
     planets->planet_tile_indices[new_planet_index * 2 + 1] = y;
+    planets->planet_distance_from_sun[new_planet_index] = distance_from_sun;
     planets->planet_type[new_planet_index] = type;
     planets->planet_size[new_planet_index] = size;
 
