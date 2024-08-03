@@ -6,11 +6,12 @@
 #include "../util/general_helpers.h"
 #include "board.h"
 #include <memory.h>
+#include <stdlib.h>
 
 static float g_health_bar_size_x = BOARD_HEX_TILE_WIDTH / 2.0f;
 static float g_health_bar_size_y = BOARD_HEX_TILE_HEIGHT / 12.0f;
 static float g_health_bar_offset_x = BOARD_HEX_TILE_WIDTH / 4.0f;
-static float g_health_bar_offset_y = BOARD_HEX_TILE_HEIGHT / 2.0f + (BOARD_HEX_TILE_HEIGHT / 12.0f);
+static float g_health_bar_offset_y = BOARD_HEX_TILE_HEIGHT / 2.0f - (BOARD_HEX_TILE_HEIGHT / 3.0f);
 
 Units *units_create(int board_dimension_x, int board_dimension_y)
 {
@@ -32,6 +33,7 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     units->unit_health_colors = NULL;
     units->unit_tile_occupation_status = NULL;
     units->unit_movement_points = NULL;
+    units->unit_type = NULL;
 
     da_int_init(&units->unit_freed_indices, 4);
 
@@ -116,12 +118,19 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
         units_destroy(units);
         return NULL;
     }
-    units->unit_movement_points[0] = 2.0f;
 
-    unit_add(units, 1, 1, 0, board_dimension_x);
-    unit_add(units, 2, 1, board_dimension_y - 1, board_dimension_x);
-    unit_add(units, 3, board_dimension_x - 2, 0, board_dimension_x);
-    unit_add(units, 4, board_dimension_x - 2, board_dimension_y - 1, board_dimension_x);
+    units->unit_type = malloc(sizeof(int));
+    if (units->unit_type == NULL)
+    {
+        printf("Error allocating unit_type\n");
+        units_destroy(units);
+        return NULL;
+    }
+
+    unit_add(units, 1, DROID, 1, 0, board_dimension_x);
+    unit_add(units, 2, DROID, 1, board_dimension_y - 1, board_dimension_x);
+    unit_add(units, 3, DROID, board_dimension_x - 2, 0, board_dimension_x);
+    unit_add(units, 4, DROID, board_dimension_x - 2, board_dimension_y - 1, board_dimension_x);
 
     return units;
 }
@@ -137,6 +146,7 @@ void unit_realloc(Units *units)
     realloc_float(&units->unit_health_uvs, units->unit_buffer_size * 12);
     realloc_float(&units->unit_health_colors, units->unit_buffer_size * 24);
     realloc_float(&units->unit_movement_points, units->unit_buffer_size);
+    realloc_int(&units->unit_type, units->unit_buffer_size);
 }
 
 void unit_clear_vertices(Units *units)
@@ -149,7 +159,7 @@ void unit_clear_vertices(Units *units)
     memset(units->unit_health_colors, 0, sizeof(float) * units->unit_buffer_size * 24);
 }
 
-void unit_add(Units *units, int owner, int x, int y, int board_dimension_x)
+void unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x)
 {
     int new_unit_index;
     if (units->unit_freed_indices.used == 0)
@@ -169,7 +179,8 @@ void unit_add(Units *units, int owner, int x, int y, int board_dimension_x)
     units->unit_owner[new_unit_index] = owner;
     units->unit_health[new_unit_index] = 100.0f;
     // TODO: replace 2.0f with something else
-    units->unit_movement_points[new_unit_index] = 2.0f;
+    units->unit_movement_points[new_unit_index] = 4.0f;
+    units->unit_type[new_unit_index] = type;
 
     unit_update_position(units, new_unit_index, x, y);
 
@@ -200,18 +211,28 @@ void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension
     units->unit_update_flags |= UNIT_UPDATE | UNIT_UPDATE_HEALTH;
 }
 
-bool unit_attack(Units *units, int unit_index, int x, int y, int board_dimension_x)
+enum BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
 {
-    units->unit_health[unit_index] -= 20.0f;
-    if (units->unit_health[unit_index] > 0.0f)
+    // TODO: damage based on exp/level, and current health
+    // TODO: also, find better random
+    units->unit_health[defender_index] -= (float)(rand() % 10000) / 100.0f;
+    units->unit_health[attacker_index] -= (float)(rand() % 10000) / 100.0f;
+    if (units->unit_health[defender_index] > 0.0f && units->unit_health[attacker_index] > 0.0f)
     {
-        unit_update_health_position(units, unit_index);
-        return false;
+        unit_update_health_position(units, defender_index);
+        unit_update_health_position(units, attacker_index);
+        return NO_UNITS_DESTROYED;
+    }
+    else if (units->unit_health[defender_index] <= 0.0f && units->unit_health[attacker_index] > 0.0f)
+    {
+        return DEFENDER_DESTROYED;
+    }
+    else if (units->unit_health[defender_index] >= 0.0f && units->unit_health[attacker_index] <= 0.0f)
+    {
+        return ATTACKER_DESTROYED;
     }
 
-    unit_remove(units, unit_index, x, y, board_dimension_x);
-
-    return true;
+    return BOTH_DESTROYED;
 }
 
 void unit_update_position(Units *units, int unit_index, int x, int y)
@@ -242,18 +263,17 @@ void unit_update_position(Units *units, int unit_index, int x, int y)
 
 void unit_update_uv(Units *units, int unit_index)
 {
-    // TODO: replace 4.0f with variable
-    units->unit_uvs[unit_index * 12] = 2.0f / 4.0f;
+    units->unit_uvs[unit_index * 12] = (float)units->unit_type[unit_index] / TOTAL_UNIT_TYPES;
     units->unit_uvs[unit_index * 12 + 1] = 1.0f;
-    units->unit_uvs[unit_index * 12 + 2] = 3.0f / 4.0f;
+    units->unit_uvs[unit_index * 12 + 2] = ((float)units->unit_type[unit_index] + 1.0f) / TOTAL_UNIT_TYPES;
     units->unit_uvs[unit_index * 12 + 3] = 0.0f;
-    units->unit_uvs[unit_index * 12 + 4] = 2.0f / 4.0f;
+    units->unit_uvs[unit_index * 12 + 4] = (float)units->unit_type[unit_index] / TOTAL_UNIT_TYPES;
     units->unit_uvs[unit_index * 12 + 5] = 0.0f;
-    units->unit_uvs[unit_index * 12 + 6] = 2.0f / 4.0f;
+    units->unit_uvs[unit_index * 12 + 6] = (float)units->unit_type[unit_index] / TOTAL_UNIT_TYPES;
     units->unit_uvs[unit_index * 12 + 7] = 1.0f;
-    units->unit_uvs[unit_index * 12 + 8] = 3.0f / 4.0f;
+    units->unit_uvs[unit_index * 12 + 8] = ((float)units->unit_type[unit_index] + 1.0f) / TOTAL_UNIT_TYPES;
     units->unit_uvs[unit_index * 12 + 9] = 0.0f;
-    units->unit_uvs[unit_index * 12 + 10] = 3.0f / 4.0f;
+    units->unit_uvs[unit_index * 12 + 10] = ((float)units->unit_type[unit_index] + 1.0f) / TOTAL_UNIT_TYPES;
     units->unit_uvs[unit_index * 12 + 11] = 1.0f;
     units->unit_update_flags |= UNIT_UPDATE;
 }
