@@ -47,6 +47,10 @@ int da_int_pop_front(DynamicIntArray *da);
 
 float da_float_pop_front(DynamicFloatArray *da);
 
+void da_int_clear(DynamicIntArray *da);
+
+void da_float_clear(DynamicFloatArray *da);
+
 void da_int_free(DynamicIntArray *da);
 
 void da_float_free(DynamicFloatArray *da);

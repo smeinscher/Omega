@@ -95,7 +95,7 @@ void planet_orbit(Planets *planets)
         y = planets->planet_tile_indices[i * 2 + 1] - planets->planet_tile_indices[1];
         int q, r;
         hex_grid_offset_to_axial(x, y, &q, &r);
-        hex_grid_get_next(false, planets->planet_distance_from_sun[i], &q, &r);
+        hex_grid_rotation_get_next(false, planets->planet_distance_from_sun[i], &q, &r);
         hex_grid_axial_to_offset(q, r, &x, &y);
         planets->planet_tile_indices[i * 2] = planets->planet_tile_indices[0] + x;
         planets->planet_tile_indices[i * 2 + 1] = planets->planet_tile_indices[1] + y;

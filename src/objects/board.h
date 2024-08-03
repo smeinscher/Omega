@@ -15,10 +15,13 @@
 #define BOARD_UPDATE_BORDERS 0x1
 #define BOARD_UPDATE_FILL 0x2
 
+#define MAX_PLAYERS 4
+
 typedef struct Board
 {
     int board_dimension_x;
     int board_dimension_y;
+    int player_count;
 
     int hovered_point;
     int selected_point;
@@ -35,7 +38,6 @@ typedef struct Board
 
     int board_current_turn;
 
-    int *selected_tiles;
     float *board_fill_positions;
     float *board_fill_colors;
     int *tile_ownership_status;
@@ -46,12 +48,16 @@ typedef struct Board
     float *board_border_uvs;
     float *board_border_colors;
 
+    DynamicIntArray *board_highlighted_path;
+    DynamicIntArray *board_moveable_tiles;
+    DynamicIntArray *board_attackable_tiles;
+
     Units *units;
 
     Planets *planets;
 } Board;
 
-Board *board_create(int dimension_x, int dimension_y);
+Board *board_create(int dimension_x, int dimension_y, int player_count);
 
 void board_reset(Board **board);
 
@@ -66,6 +72,10 @@ void board_update_fill_vertices(Board *board);
 void board_update_border(Board *board);
 
 void board_process_turn(Board *board);
+
+bool board_tile_is_valid(Board *board, int x, int y);
+
+bool board_tile_is_occupied(Board *board, int x, int y);
 
 void board_clear(Board *board);
 

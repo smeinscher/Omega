@@ -10,6 +10,24 @@
 #define UNIT_UPDATE 0x1
 #define UNIT_UPDATE_HEALTH 0x2
 
+#define TOTAL_UNIT_TYPES 4
+
+enum UnitType
+{
+    DROID,
+    BATTLESHIP,
+    SCOUT,
+    STATION
+};
+
+enum BattleResult
+{
+    NO_UNITS_DESTROYED,
+    DEFENDER_DESTROYED,
+    ATTACKER_DESTROYED,
+    BOTH_DESTROYED
+};
+
 typedef struct Units
 {
     int unit_buffer_size;
@@ -29,6 +47,8 @@ typedef struct Units
 
     int *unit_tile_occupation_status;
 
+    int *unit_type;
+
     DynamicIntArray unit_freed_indices;
 
 } Units;
@@ -39,11 +59,11 @@ void unit_realloc(Units *units);
 
 void unit_clear_vertices(Units *units);
 
-void unit_add(Units *units, int owner, int x, int y, int board_dimension_x);
+void unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x);
 
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x);
 
-bool unit_attack(Units *units, int unit_index, int x, int y, int board_dimension_x);
+enum BattleResult unit_attack(Units *units, int defender_index, int attacker_index);
 
 void unit_update_position(Units *units, int unit_index, int x, int y);
 

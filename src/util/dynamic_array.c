@@ -3,6 +3,7 @@
 //
 
 #include "dynamic_array.h"
+#include <memory.h>
 
 void da_int_init(DynamicIntArray *da, size_t initial_size)
 {
@@ -202,8 +203,24 @@ float da_float_pop_front(DynamicFloatArray *da)
     return temp;
 }
 
+void da_int_clear(DynamicIntArray *da)
+{
+    memset(da->array, 0, sizeof(int) * da->used);
+    da->used = 0;
+}
+
+void da_float_clear(DynamicFloatArray *da)
+{
+    memset(da->array, 0, sizeof(float) * da->used);
+    da->used = 0;
+}
+
 void da_int_free(DynamicIntArray *da)
 {
+    if (da == NULL)
+    {
+        return;
+    }
     free(da->array);
     da->array = NULL;
     da->used = 0;
