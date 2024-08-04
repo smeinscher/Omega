@@ -32,6 +32,7 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     units->unit_health_uvs = NULL;
     units->unit_health_colors = NULL;
     units->unit_tile_occupation_status = NULL;
+    units->unit_tile_ownership_status = NULL;
     units->unit_movement_points = NULL;
     units->unit_type = NULL;
 
@@ -111,6 +112,15 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
         units->unit_tile_occupation_status[i] = -1;
     }
 
+    units->unit_tile_ownership_status = malloc(sizeof(int) * board_dimension_x * board_dimension_y);
+    if (units->unit_tile_ownership_status == NULL)
+    {
+        printf("Error allocating unit_tile_ownership_status\n");
+        units_destroy(units);
+        return NULL;
+    }
+    memset(units->unit_tile_ownership_status, 0, sizeof(int) * board_dimension_x * board_dimension_y);
+
     units->unit_movement_points = malloc(sizeof(float));
     if (units->unit_movement_points == NULL)
     {
@@ -127,10 +137,10 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
         return NULL;
     }
 
-    unit_add(units, 1, DROID, 1, 0, board_dimension_x);
-    unit_add(units, 2, DROID, 1, board_dimension_y - 1, board_dimension_x);
-    unit_add(units, 3, DROID, board_dimension_x - 2, 0, board_dimension_x);
-    unit_add(units, 4, DROID, board_dimension_x - 2, board_dimension_y - 1, board_dimension_x);
+    unit_add(units, 1, DROID, 1, 0, board_dimension_x, board_dimension_y);
+    unit_add(units, 2, DROID, 1, board_dimension_y - 1, board_dimension_x, board_dimension_y);
+    unit_add(units, 3, DROID, board_dimension_x - 2, 0, board_dimension_x, board_dimension_y);
+    unit_add(units, 4, DROID, board_dimension_x - 2, board_dimension_y - 1, board_dimension_x, board_dimension_y);
 
     return units;
 }
@@ -159,7 +169,7 @@ void unit_clear_vertices(Units *units)
     memset(units->unit_health_colors, 0, sizeof(float) * units->unit_buffer_size * 24);
 }
 
-void unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x)
+void unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x, int board_dimension_y)
 {
     int new_unit_index;
     if (units->unit_freed_indices.used == 0)
@@ -193,6 +203,8 @@ void unit_add(Units *units, int owner, int type, int x, int y, int board_dimensi
     unit_update_color(units, new_unit_index);
 
     unit_update_health_color(units, new_unit_index);
+
+    unit_claim_territory(units, new_unit_index, x, y, board_dimension_x, board_dimension_y);
 }
 
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x)
@@ -211,7 +223,7 @@ void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension
     units->unit_update_flags |= UNIT_UPDATE | UNIT_UPDATE_HEALTH;
 }
 
-enum BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
+BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
 {
     // TODO: damage based on exp/level, and current health
     // TODO: also, find better random
@@ -225,14 +237,114 @@ enum BattleResult unit_attack(Units *units, int defender_index, int attacker_ind
     }
     else if (units->unit_health[defender_index] <= 0.0f && units->unit_health[attacker_index] > 0.0f)
     {
+        unit_update_health_position(units, attacker_index);
         return DEFENDER_DESTROYED;
     }
     else if (units->unit_health[defender_index] >= 0.0f && units->unit_health[attacker_index] <= 0.0f)
     {
+        unit_update_health_position(units, defender_index);
         return ATTACKER_DESTROYED;
     }
 
     return BOTH_DESTROYED;
+}
+
+bool unit_can_move(Units *units, int destination_x, int destination_y, int board_dimension_x)
+{
+    return units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] == -1;
+}
+
+void unit_move(Units *units, int unit_index, int current_x, int current_y, int destination_x, int destination_y,
+               int board_dimension_x, int board_dimension_y)
+{
+    if (!unit_can_move(units, destination_x, destination_y, board_dimension_x))
+    {
+        printf("Can not make this move\n");
+        return;
+    }
+    units->unit_tile_occupation_status[current_y * board_dimension_x + current_x] = -1;
+    units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] = unit_index;
+    unit_update_position(units, unit_index, destination_x, destination_y);
+    int start_q, start_r, target_q, target_r;
+    hex_grid_offset_to_axial(current_x, current_y, &start_q, &start_r);
+    hex_grid_offset_to_axial(destination_x, destination_y, &target_q, &target_r);
+    units->unit_movement_points[unit_index] -= (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
+    unit_claim_territory(units, unit_index, destination_x, destination_y, board_dimension_x, board_dimension_y);
+}
+
+void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_y, int b_x, int b_y,
+               int board_dimension_x)
+{
+    units->unit_tile_occupation_status[a_y * board_dimension_x + a_x] = unit_index_b;
+    units->unit_tile_occupation_status[b_y * board_dimension_x + b_x] = unit_index_a;
+    if (unit_index_a != -1)
+    {
+        unit_update_position(units, unit_index_a, b_x, b_y);
+    }
+    if (unit_index_b != -1)
+    {
+        unit_update_position(units, unit_index_b, a_x, a_y);
+    }
+    int start_q, start_r, target_q, target_r;
+    hex_grid_offset_to_axial(a_x, a_y, &start_q, &start_r);
+    hex_grid_offset_to_axial(b_x, b_y, &target_q, &target_r);
+    if (unit_index_a != -1)
+    {
+        units->unit_movement_points[unit_index_a] -=
+            (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
+    }
+    if (unit_index_b != -1)
+    {
+        units->unit_movement_points[unit_index_b] -=
+            (float)hex_grid_get_axial_distance(target_q, target_r, start_q, start_r);
+    }
+}
+
+void unit_claim_territory(Units *units, int unit_index, int x, int y, int board_dimension_x, int board_dimension_y)
+{
+    units->unit_tile_ownership_status[y * board_dimension_x + x] = units->unit_owner[unit_index];
+    // Tiles around unit will be taken over, unless occupied
+    if (y > 0 && units->unit_tile_occupation_status[(y - 1) * board_dimension_x + x] == -1)
+    {
+        units->unit_tile_ownership_status[(y - 1) * board_dimension_x + x] = units->unit_owner[unit_index];
+    }
+    if (y < board_dimension_y - 1 && units->unit_tile_occupation_status[(y + 1) * board_dimension_x + x] == -1)
+    {
+        units->unit_tile_ownership_status[(y + 1) * board_dimension_x + x] = units->unit_owner[unit_index];
+    }
+    if (x > 0 && units->unit_tile_occupation_status[y * board_dimension_x + x - 1] == -1)
+    {
+        units->unit_tile_ownership_status[y * board_dimension_x + x - 1] = units->unit_owner[unit_index];
+    }
+    if (x < board_dimension_x - 1 && units->unit_tile_occupation_status[y * board_dimension_x + x + 1] == -1)
+    {
+        units->unit_tile_ownership_status[y * board_dimension_x + x + 1] = units->unit_owner[unit_index];
+    }
+    if (x % 2 == 0)
+    {
+        if (x > 0 && y > 0 && units->unit_tile_occupation_status[(y - 1) * board_dimension_x + x - 1] == -1)
+        {
+            units->unit_tile_ownership_status[(y - 1) * board_dimension_x + x - 1] = units->unit_owner[unit_index];
+        }
+        if (x < board_dimension_x - 1 && y > 0 &&
+            units->unit_tile_occupation_status[(y - 1) * board_dimension_x + x + 1] == -1)
+        {
+            units->unit_tile_ownership_status[(y - 1) * board_dimension_x + x + 1] = units->unit_owner[unit_index];
+        }
+    }
+    else
+    {
+        if (x > 0 && y < board_dimension_y - 1 &&
+            units->unit_tile_occupation_status[(y + 1) * board_dimension_x + x - 1] == -1)
+        {
+            units->unit_tile_ownership_status[(y + 1) * board_dimension_x + x - 1] = units->unit_owner[unit_index];
+        }
+        if (x < board_dimension_x - 1 && y < board_dimension_y - 1 &&
+            units->unit_tile_occupation_status[(y + 1) * board_dimension_x + x + 1] == -1)
+        {
+            units->unit_tile_ownership_status[(y + 1) * board_dimension_x + x + 1] = units->unit_owner[unit_index];
+        }
+    }
 }
 
 void unit_update_position(Units *units, int unit_index, int x, int y)
@@ -390,6 +502,8 @@ void units_clear(Units *units)
     units->unit_health_colors = NULL;
     free(units->unit_tile_occupation_status);
     units->unit_tile_occupation_status = NULL;
+    free(units->unit_tile_ownership_status);
+    units->unit_tile_ownership_status = NULL;
     da_int_free(&units->unit_freed_indices);
 }
 

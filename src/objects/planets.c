@@ -77,11 +77,26 @@ Planets *planets_create(int board_dimension_x, int board_dimension_y)
         return NULL;
     }
 
-    planet_add(planets, 0.6f, 3, 0, board_dimension_x / 2, board_dimension_y / 2);
-    planet_add(planets, 0.15f, 0, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
-    planet_add(planets, 0.15f, 2, 3, board_dimension_x / 2, board_dimension_y / 2 + 3);
-    planet_add(planets, 0.15f, 4, 5, board_dimension_x / 2 + 5, board_dimension_y / 2);
-    planet_add(planets, 0.15f, 1, 10, board_dimension_x / 2 - 10, board_dimension_y / 2);
+    planet_add(planets, 0.6f, SUN, 0, board_dimension_x / 2, board_dimension_y / 2);
+    planet_add(planets, 0.1f, HOT, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
+    planet_add(planets, 0.15f, EARTH, 3, board_dimension_x / 2, board_dimension_y / 2 + 3);
+    planet_add(planets, 0.13f, MARS, 5, board_dimension_x / 2 + 5, board_dimension_y / 2);
+    planet_add(planets, 0.25f, NEPTUNE, 8, board_dimension_x / 2 - 8, board_dimension_y / 2);
+    int asteroids_distance_from_sun = 9;
+    int q = 0;
+    int r = -asteroids_distance_from_sun;
+    for (int i = 0; i < asteroids_distance_from_sun * 6; i++)
+    {
+        int x, y;
+        hex_grid_axial_to_offset(q, r, &x, &y);
+        x += board_dimension_x / 2;
+        y += board_dimension_y / 2;
+        if (i % 3 == 0)
+        {
+            planet_add(planets, 1.0f, ASTEROIDS, asteroids_distance_from_sun, x, y);
+        }
+        hex_grid_rotation_get_next(false, asteroids_distance_from_sun, &q, &r);
+    }
 
     return planets;
 }
@@ -172,19 +187,24 @@ void planet_update_position(Planets *planets, int planet_index)
 
 void planet_update_uv(Planets *planets, int planet_index)
 {
-    // TODO: replace 5.0f and 6.0f with variables
-    planets->planet_uvs[planet_index * 12] = 0.0f;
-    planets->planet_uvs[planet_index * 12 + 1] = ((float)planets->planet_type[planet_index] + 1.0f) / 5.0f;
-    planets->planet_uvs[planet_index * 12 + 2] = 1.0f / 6.0f;
-    planets->planet_uvs[planet_index * 12 + 3] = (float)planets->planet_type[planet_index] / 5.0f;
-    planets->planet_uvs[planet_index * 12 + 4] = 0.0f;
-    planets->planet_uvs[planet_index * 12 + 5] = (float)planets->planet_type[planet_index] / 5.0f;
-    planets->planet_uvs[planet_index * 12 + 6] = 0.0f;
-    planets->planet_uvs[planet_index * 12 + 7] = ((float)planets->planet_type[planet_index] + 1.0f) / 5.0f;
-    planets->planet_uvs[planet_index * 12 + 8] = 1.0f / 6.0f;
-    planets->planet_uvs[planet_index * 12 + 9] = (float)planets->planet_type[planet_index] / 5.0f;
-    planets->planet_uvs[planet_index * 12 + 10] = 1.0f / 6.0f;
-    planets->planet_uvs[planet_index * 12 + 11] = ((float)planets->planet_type[planet_index] + 1.0f) / 5.0f;
+    // TODO: replace hardcoded values with variables
+    float uv_start_x = planets->planet_type[planet_index] == ASTEROIDS ? 0.0f : 5.0f / 6.0f;
+    float uv_end_x = planets->planet_type[planet_index] == ASTEROIDS ? 1.0f / 6.0f : 1.0f;
+    planets->planet_uvs[planet_index * 12] = uv_start_x;
+    planets->planet_uvs[planet_index * 12 + 1] =
+        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
+    planets->planet_uvs[planet_index * 12 + 2] = uv_end_x;
+    planets->planet_uvs[planet_index * 12 + 3] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
+    planets->planet_uvs[planet_index * 12 + 4] = uv_start_x;
+    planets->planet_uvs[planet_index * 12 + 5] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
+    planets->planet_uvs[planet_index * 12 + 6] = uv_start_x;
+    planets->planet_uvs[planet_index * 12 + 7] =
+        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
+    planets->planet_uvs[planet_index * 12 + 8] = uv_end_x;
+    planets->planet_uvs[planet_index * 12 + 9] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
+    planets->planet_uvs[planet_index * 12 + 10] = uv_end_x;
+    planets->planet_uvs[planet_index * 12 + 11] =
+        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
     planets->planet_update_flags |= PLANET_UPDATE;
 }
 

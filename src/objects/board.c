@@ -174,7 +174,7 @@ void board_set_tile_border_vertices(Board *board, int x, int y, int border_type,
     board->board_border_uvs[start_index + 11] = 1.0f;
 
     float color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-    switch (board->tile_ownership_status[y * board->board_dimension_x + x])
+    switch (board->units->unit_tile_ownership_status[y * board->board_dimension_x + x])
     {
     case 1:
         color[0] = 0.7f;
@@ -202,40 +202,6 @@ void board_set_tile_border_vertices(Board *board, int x, int y, int border_type,
     }
 }
 
-void board_set_tile_ownership(Board *board)
-{
-    memset(board->tile_ownership_status, 0, sizeof(int) * board->board_dimension_x * board->board_dimension_y);
-    board->tile_ownership_status[0] = 1;
-    board->tile_ownership_status[1] = 1;
-    board->tile_ownership_status[2] = 1;
-    board->tile_ownership_status[board->board_dimension_x] = 1;
-    board->tile_ownership_status[board->board_dimension_x + 1] = 1;
-    board->tile_ownership_status[board->board_dimension_x + 2] = 1;
-
-    board->tile_ownership_status[(board->board_dimension_y - 2) * board->board_dimension_x] = 2;
-    board->tile_ownership_status[(board->board_dimension_y - 2) * board->board_dimension_x + 1] = 2;
-    board->tile_ownership_status[(board->board_dimension_y - 2) * board->board_dimension_x + 2] = 2;
-    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x] = 2;
-    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x + 1] = 2;
-    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x + 2] = 2;
-
-    board->tile_ownership_status[board->board_dimension_x - 3] = 3;
-    board->tile_ownership_status[board->board_dimension_x - 2] = 3;
-    board->tile_ownership_status[board->board_dimension_x - 1] = 3;
-    board->tile_ownership_status[2 * board->board_dimension_x - 3] = 3;
-    board->tile_ownership_status[2 * board->board_dimension_x - 2] = 3;
-    board->tile_ownership_status[2 * board->board_dimension_x - 1] = 3;
-
-    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x - 3] = 4;
-    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x - 2] = 4;
-    board->tile_ownership_status[(board->board_dimension_y - 1) * board->board_dimension_x - 1] = 4;
-    board->tile_ownership_status[board->board_dimension_y * board->board_dimension_x - 3] = 4;
-    board->tile_ownership_status[board->board_dimension_y * board->board_dimension_x - 2] = 4;
-    board->tile_ownership_status[board->board_dimension_y * board->board_dimension_x - 1] = 4;
-
-    board->board_borders_count = board->board_dimension_x * board->board_dimension_y * 6;
-}
-
 // TODO: Error checking for malloc
 Board *board_create(int dimension_x, int dimension_y, int player_count)
 {
@@ -259,7 +225,6 @@ Board *board_create(int dimension_x, int dimension_y, int player_count)
     board->board_current_turn = 0;
     board->board_fill_positions = NULL;
     board->board_fill_colors = NULL;
-    board->tile_ownership_status = NULL;
     board->board_outline_vertices = NULL;
     board->board_outline_indices = NULL;
     board->board_border_positions = NULL;
@@ -270,15 +235,6 @@ Board *board_create(int dimension_x, int dimension_y, int player_count)
     board->board_attackable_tiles = NULL;
     board->units = NULL;
     board->planets = NULL;
-
-    board->tile_ownership_status = malloc(sizeof(int) * dimension_x * dimension_y);
-    if (board->tile_ownership_status == NULL)
-    {
-        printf("Error allocating tile_ownership_status\n");
-        board_destroy(board);
-        return NULL;
-    }
-    board_set_tile_ownership(board);
 
     board->board_outline_vertices = board_vertices_create(dimension_x, dimension_y, 0, 0);
     if (board->board_outline_vertices == NULL)
@@ -292,6 +248,8 @@ Board *board_create(int dimension_x, int dimension_y, int player_count)
         board_destroy(board);
         return NULL;
     }
+
+    board->board_borders_count = dimension_x * dimension_y * 6;
 
     board->board_border_positions = malloc(sizeof(float) * 12 * board->board_borders_count);
     if (board->board_border_positions == NULL)
@@ -316,7 +274,6 @@ Board *board_create(int dimension_x, int dimension_y, int player_count)
         board_destroy(board);
         return NULL;
     }
-    board_update_border(board);
 
     // Each tile (hex) has 4 inner triangles, each with 3 vertices. 12 total vertices to store;
     unsigned int num_vertices = dimension_y * dimension_x * 12;
@@ -354,6 +311,8 @@ Board *board_create(int dimension_x, int dimension_y, int player_count)
         return NULL;
     }
 
+    board_update_border(board);
+
     board->planets = planets_create(board->board_dimension_x, board->board_dimension_y);
     if (board->planets == NULL)
     {
@@ -369,68 +328,15 @@ void board_reset(Board **board)
 {
     int dimension_x = (*board)->board_dimension_x;
     int dimension_y = (*board)->board_dimension_y;
+    int player_count = (*board)->player_count;
     board_destroy(*board);
-    *board = board_create(dimension_x, dimension_y, 0);
+    *board = board_create(dimension_x, dimension_y, player_count);
 }
 
 void board_reset_new_dimensions(Board **board, int new_board_dimension_x, int new_board_dimension_y)
 {
     board_destroy(*board);
     *board = board_create(new_board_dimension_x, new_board_dimension_y, 0);
-}
-
-void board_unit_claim_territory(Board *board, int unit_index, int x, int y)
-{
-    // Tiles around unit will be taken over, unless occupied
-    if (y > 0 && board->units->unit_tile_occupation_status[(y - 1) * board->board_dimension_x + x] == -1)
-    {
-        board->tile_ownership_status[(y - 1) * board->board_dimension_x + x] = board->units->unit_owner[unit_index];
-    }
-    if (y < board->board_dimension_y - 1 &&
-        board->units->unit_tile_occupation_status[(y + 1) * board->board_dimension_x + x] == -1)
-    {
-        board->tile_ownership_status[(y + 1) * board->board_dimension_x + x] = board->units->unit_owner[unit_index];
-    }
-    if (x > 0 && board->units->unit_tile_occupation_status[y * board->board_dimension_x + x - 1] == -1)
-    {
-        board->tile_ownership_status[y * board->board_dimension_x + x - 1] = board->units->unit_owner[unit_index];
-    }
-    if (x < board->board_dimension_x - 1 &&
-        board->units->unit_tile_occupation_status[y * board->board_dimension_x + x + 1] == -1)
-    {
-        board->tile_ownership_status[y * board->board_dimension_x + x + 1] = board->units->unit_owner[unit_index];
-    }
-    if (x % 2 == 0)
-    {
-        if (x > 0 && y > 0 &&
-            board->units->unit_tile_occupation_status[(y - 1) * board->board_dimension_x + x - 1] == -1)
-        {
-            board->tile_ownership_status[(y - 1) * board->board_dimension_x + x - 1] =
-                board->units->unit_owner[unit_index];
-        }
-        if (x < board->board_dimension_x - 1 && y > 0 &&
-            board->units->unit_tile_occupation_status[(y - 1) * board->board_dimension_x + x + 1] == -1)
-        {
-            board->tile_ownership_status[(y - 1) * board->board_dimension_x + x + 1] =
-                board->units->unit_owner[unit_index];
-        }
-    }
-    else
-    {
-        if (x > 0 && y < board->board_dimension_y - 1 &&
-            board->units->unit_tile_occupation_status[(y + 1) * board->board_dimension_x + x - 1] == -1)
-        {
-            board->tile_ownership_status[(y + 1) * board->board_dimension_x + x - 1] =
-                board->units->unit_owner[unit_index];
-        }
-        if (x < board->board_dimension_x - 1 && y < board->board_dimension_y - 1 &&
-            board->units->unit_tile_occupation_status[(y + 1) * board->board_dimension_x + x + 1] == -1)
-        {
-            board->tile_ownership_status[(y + 1) * board->board_dimension_x + x + 1] =
-                board->units->unit_owner[unit_index];
-        }
-    }
-    board->board_update_flags |= BOARD_UPDATE_BORDERS;
 }
 
 bool in_board_attackable_tiles(Board *board, int move_x, int move_y)
@@ -556,20 +462,9 @@ void board_handle_tile_click(Board *board)
             }
             if (can_attack || can_move)
             {
-                board->units->unit_tile_occupation_status[board->selected_tile_index_y * board->board_dimension_x +
-                                                          board->selected_tile_index_x] = -1;
-                board->units->unit_tile_occupation_status[move_y * board->board_dimension_x + move_x] = unit_index;
-                board->tile_ownership_status[move_y * board->board_dimension_x + move_x] =
-                    board->units->unit_owner[unit_index];
-                board_unit_claim_territory(board, unit_index, move_x, move_y);
-                int start_q, start_r, target_q, target_r;
-                hex_grid_offset_to_axial(board->selected_tile_index_x, board->selected_tile_index_y, &start_q,
-                                         &start_r);
-                hex_grid_offset_to_axial(board->mouse_tile_index_x, board->mouse_tile_index_y, &target_q, &target_r);
-                board->units->unit_movement_points[unit_index] -=
-                    (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
-
-                unit_update_position(board->units, unit_index, move_x, move_y);
+                unit_move(board->units, unit_index, board->selected_tile_index_x, board->selected_tile_index_y, move_x,
+                          move_y, board->board_dimension_x, board->board_dimension_y);
+                board->board_update_flags |= BOARD_UPDATE_BORDERS;
             }
         }
         board->selected_point = -1;
@@ -827,7 +722,7 @@ void board_update_border(Board *board)
     int index = 0;
     for (int i = 0; i < dimension_x * dimension_y; i++)
     {
-        if (board->tile_ownership_status[i] == 0)
+        if (board->units->unit_tile_ownership_status[i] == 0)
         {
             continue;
         }
@@ -840,36 +735,36 @@ void board_update_border(Board *board)
         int top_left = i - (x % 2 == 0 ? dimension_x + 1 : 1);
         int top_right = i - (x % 2 == 0 ? dimension_x - 1 : -1);
         if (bottom >= dimension_x * dimension_y ||
-            board->tile_ownership_status[bottom] != board->tile_ownership_status[i])
+            board->units->unit_tile_ownership_status[bottom] != board->units->unit_tile_ownership_status[i])
         {
             board_set_tile_border_vertices(board, x, y, 0, index);
             index += 12;
         }
         if (x == 0 || bottom_left < 0 || bottom_left >= dimension_x * dimension_y ||
-            board->tile_ownership_status[bottom_left] != board->tile_ownership_status[i])
+            board->units->unit_tile_ownership_status[bottom_left] != board->units->unit_tile_ownership_status[i])
         {
             board_set_tile_border_vertices(board, x, y, 1, index);
             index += 12;
         }
         if (x == dimension_x - 1 || bottom_right < 0 || bottom_right >= dimension_x * dimension_y ||
-            board->tile_ownership_status[bottom_right] != board->tile_ownership_status[i])
+            board->units->unit_tile_ownership_status[bottom_right] != board->units->unit_tile_ownership_status[i])
         {
             board_set_tile_border_vertices(board, x, y, 2, index);
             index += 12;
         }
-        if (top < 0 || board->tile_ownership_status[top] != board->tile_ownership_status[i])
+        if (top < 0 || board->units->unit_tile_ownership_status[top] != board->units->unit_tile_ownership_status[i])
         {
             board_set_tile_border_vertices(board, x, y, 3, index);
             index += 12;
         }
         if (x == 0 || top_left < 0 || top_left >= dimension_x * dimension_y ||
-            board->tile_ownership_status[top_left] != board->tile_ownership_status[i])
+            board->units->unit_tile_ownership_status[top_left] != board->units->unit_tile_ownership_status[i])
         {
             board_set_tile_border_vertices(board, x, y, 4, index);
             index += 12;
         }
         if (x == dimension_x - 1 || top_right < 0 || top_right >= dimension_x * dimension_y ||
-            board->tile_ownership_status[top_right] != board->tile_ownership_status[i])
+            board->units->unit_tile_ownership_status[top_right] != board->units->unit_tile_ownership_status[i])
         {
             board_set_tile_border_vertices(board, x, y, 5, index);
             index += 12;
@@ -881,24 +776,29 @@ void board_update_border(Board *board)
 
 void board_process_turn(Board *board)
 {
-    for (int i = 0; i < board->units->unit_buffer_size; i++)
-    {
-        // TODO: replace 4 with variable representing total number of 'teams'
-        if (board->units->unit_owner[i] == board->board_current_turn % board->player_count + 1)
-        {
-            // TODO: replace 2.0f with variable representing max unit movement per turn
-            board->units->unit_movement_points[i] = 4.0f;
-        }
-    }
-
     if (board->board_current_turn % board->player_count == board->player_count - 1)
     {
-        for (int i = 1; i < board->planets->planet_buffer_size; i++)
+        DynamicIntArray moved_units;
+        da_int_init(&moved_units, 2);
+        for (int i = board->planets->planet_buffer_size - 1; i > 0; i--)
         {
             int x = board->planets->planet_tile_indices[i * 2];
             int y = board->planets->planet_tile_indices[i * 2 + 1];
-            if (board->units->unit_tile_occupation_status[y * board->board_dimension_x + x] != -1)
+            int unit_index = board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
+            if (unit_index != -1)
             {
+                bool unit_already_moved = false;
+                for (int j = 0; j < moved_units.used; j++)
+                {
+                    if (unit_index == moved_units.array[j])
+                    {
+                        unit_already_moved = true;
+                    }
+                }
+                if (unit_already_moved)
+                {
+                    continue;
+                }
                 int relative_x, relative_y;
                 relative_x = x - board->planets->planet_tile_indices[0];
                 relative_y = y - board->planets->planet_tile_indices[1];
@@ -908,24 +808,23 @@ void board_process_turn(Board *board)
                 hex_grid_axial_to_offset(q, r, &relative_x, &relative_y);
                 int new_x = board->planets->planet_tile_indices[0] + relative_x;
                 int new_y = board->planets->planet_tile_indices[1] + relative_y;
-                board->units->unit_tile_occupation_status[new_y * board->board_dimension_x + new_x] =
-                    board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
-                board->units->unit_tile_occupation_status[y * board->board_dimension_x + x] = -1;
-                unit_update_position(
-                    board->units, board->units->unit_tile_occupation_status[new_y * board->board_dimension_x + new_x],
-                    new_x, new_y);
-                unit_update_health_position(
-                    board->units, board->units->unit_tile_occupation_status[new_y * board->board_dimension_x + new_x]);
-                board->tile_ownership_status[new_y * board->board_dimension_x + new_x] =
-                    board->units->unit_owner
-                        [board->units->unit_tile_occupation_status[new_y * board->board_dimension_x + new_x]];
-                board_unit_claim_territory(
-                    board, board->units->unit_tile_occupation_status[new_y * board->board_dimension_x + new_x], new_x,
-                    new_y);
+                int next_tile_unit_index =
+                    board->units->unit_tile_occupation_status[new_y * board->board_dimension_x + new_x];
+                unit_swap(board->units, unit_index, next_tile_unit_index, x, y, new_x, new_y, board->board_dimension_x);
                 board->board_update_flags |= BOARD_UPDATE_BORDERS;
+                da_int_push_back(&moved_units, unit_index);
             }
         }
         planet_orbit(board->planets);
+    }
+
+    for (int i = 0; i < board->units->unit_buffer_size; i++)
+    {
+        if (board->units->unit_owner[i] == board->board_current_turn % board->player_count + 1)
+        {
+            // TODO: replace 4.0f with variable representing max unit movement per turn
+            board->units->unit_movement_points[i] = 4.0f;
+        }
     }
     board->board_current_turn++;
 }
@@ -953,8 +852,6 @@ void board_clear(Board *board)
     board->board_fill_positions = NULL;
     free(board->board_fill_colors);
     board->board_fill_colors = NULL;
-    free(board->tile_ownership_status);
-    board->tile_ownership_status = NULL;
     free(board->board_outline_vertices);
     board->board_outline_vertices = NULL;
     free(board->board_outline_indices);

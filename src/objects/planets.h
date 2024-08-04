@@ -7,6 +7,28 @@
 
 #define PLANET_UPDATE 0x1
 
+#define PLANET_TOTAL_TYPES 16
+
+enum PlanetType
+{
+    CRYSTAL,
+    EARTH,
+    HOT,
+    ICY,
+    JUPITER,
+    MARS,
+    MERCURY,
+    MOON,
+    NEPTUNE,
+    RADIATED,
+    SATURN,
+    SUN,
+    TERRESTRIAL,
+    URANUS,
+    VENUS,
+    ASTEROIDS
+};
+
 typedef struct Planets
 {
     int planet_buffer_size;

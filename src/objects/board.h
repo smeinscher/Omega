@@ -40,7 +40,6 @@ typedef struct Board
 
     float *board_fill_positions;
     float *board_fill_colors;
-    int *tile_ownership_status;
 
     float *board_outline_vertices;
     unsigned int *board_outline_indices;

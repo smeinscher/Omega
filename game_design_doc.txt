@@ -1,0 +1,44 @@
+Omega - Game Design Document
+* = not MVP
+Basic Gameplay
+    Win Condition:
+        *Create Dyson Sphere
+        Destroy all other units
+    *How to create Dyson Sphere:
+        Must control Sun space for 5 turns before you can start
+        Takes 5 turns to complete
+        Must hold for 10 turns
+        Takes a quarter of all available resources on the map to complete
+        Once completed, player will have a massive increase to Energy
+    How resources are acquired:
+        Players are given a fixed influx of resources every turn
+        Players can mine asteroids and planets
+            Limited resources, dependent on size of planet/asteroid
+    List of base resources:
+        Radioactive Material
+        Rare Metals
+        Common Metals
+    *Energy:
+        Energy is needed to keep everything going
+        Ways to generate:
+            Use radioactive materials
+            Create solar panels (rare metals + common metals to create)
+    Units:
+        Three areas:
+            Cost, Movement, Power
+        Movement, Power Leveled 0-10
+        Cost = Movement / 4 + Power * 2
+        100 Rare Metals = 1 Cost
+        1000 Common Metals = 1 Cost
+        10 Radioactive Materials = 1 Cost
+        Workers:
+            1 Cost, 4 Movement, 0 Power
+            Resources: Rare Metals 50, Common Metals 500
+        Droids:
+            8.5 Cost, 2 Movement, 4 Power
+            Resources: Rare Metals 150, Common Metals 4250, Radioactive Materials 28
+        Battleships:
+            20.25 Cost, 1 Movement, 10 Power
+            Resources: Rare Metals 350, Common Metals 8125, Radioactive Materials 86
+
+

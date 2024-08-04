@@ -20,13 +20,13 @@ enum UnitType
     STATION
 };
 
-enum BattleResult
+typedef enum BattleResult
 {
     NO_UNITS_DESTROYED,
     DEFENDER_DESTROYED,
     ATTACKER_DESTROYED,
     BOTH_DESTROYED
-};
+} BattleResult;
 
 typedef struct Units
 {
@@ -46,6 +46,7 @@ typedef struct Units
     float *unit_movement_points;
 
     int *unit_tile_occupation_status;
+    int *unit_tile_ownership_status;
 
     int *unit_type;
 
@@ -59,11 +60,21 @@ void unit_realloc(Units *units);
 
 void unit_clear_vertices(Units *units);
 
-void unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x);
+void unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x, int board_dimension_y);
 
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x);
 
-enum BattleResult unit_attack(Units *units, int defender_index, int attacker_index);
+BattleResult unit_attack(Units *units, int defender_index, int attacker_index);
+
+bool unit_can_move(Units *units, int destination_x, int destination_y, int board_dimension_x);
+
+void unit_move(Units *units, int unit_index, int current_x, int current_y, int destination_x, int destination_y,
+               int board_dimension_x, int board_dimension_y);
+
+void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_y, int b_x, int b_y,
+               int board_dimension_x);
+
+void unit_claim_territory(Units *units, int unit_index, int x, int y, int board_dimension_x, int board_dimension_y);
 
 void unit_update_position(Units *units, int unit_index, int x, int y);
 
