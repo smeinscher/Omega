@@ -120,6 +120,12 @@ void hex_grid_rotation_get_next(bool clockwise, int distance_from_center, int *q
 DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int target_x, int target_y,
                                     int board_dimension_x, int board_dimension_y)
 {
+    if (start_x < 0 || start_x >= board_dimension_x || start_y < 0 || start_y >= board_dimension_y || target_x < 0 ||
+        target_x >= board_dimension_x || target_y < 0 || target_y >= board_dimension_y)
+    {
+        printf("Doh\n");
+        return NULL;
+    }
     bool target_is_occupied = board_tile_is_occupied(board, target_x, target_y);
     int *path = malloc(sizeof(int) * board_dimension_x * board_dimension_y * 2);
     memset(path, 0, sizeof(int) * board_dimension_x * board_dimension_y * 2);
@@ -208,8 +214,9 @@ DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int 
                 current_path_tile = current_path_tile->parent;
             }
             int count = 0;
-            while (current_path_tile->position.q != all_nodes[start_y * board_dimension_x + start_x].position.q ||
-                   current_path_tile->position.r != all_nodes[start_y * board_dimension_x + start_x].position.r)
+            while (current_path_tile != NULL &&
+                   (current_path_tile->position.q != all_nodes[start_y * board_dimension_x + start_x].position.q ||
+                    current_path_tile->position.r != all_nodes[start_y * board_dimension_x + start_x].position.r))
             {
                 int x, y;
                 hex_grid_axial_to_offset(current_path_tile->position.q, current_path_tile->position.r, &x, &y);

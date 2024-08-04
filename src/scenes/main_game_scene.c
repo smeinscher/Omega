@@ -834,7 +834,7 @@ void main_game_scene_render()
     {
         nk_menubar_begin(ctx);
         nk_layout_row_begin(ctx, NK_STATIC, 25, 3);
-        nk_layout_row_push(ctx, 45);
+        nk_layout_row_push(ctx, 80);
         if (nk_menu_begin_label(ctx, "File", NK_TEXT_CENTERED, nk_vec2(120, 200)))
         {
             nk_layout_row_dynamic(ctx, 25, 1);

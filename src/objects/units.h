@@ -5,6 +5,7 @@
 #ifndef OMEGAAPP_UNITS_H
 #define OMEGAAPP_UNITS_H
 
+#include "../players/resources.h"
 #include "../util/dynamic_array.h"
 
 #define UNIT_UPDATE 0x1
@@ -12,13 +13,13 @@
 
 #define TOTAL_UNIT_TYPES 4
 
-enum UnitType
+typedef enum UnitType
 {
-    DROID,
+    WORKER,
     BATTLESHIP,
-    SCOUT,
+    DROID,
     STATION
-};
+} UnitType;
 
 typedef enum BattleResult
 {
@@ -50,6 +51,8 @@ typedef struct Units
 
     int *unit_type;
 
+    int *unit_indices;
+
     DynamicIntArray unit_freed_indices;
 
 } Units;
@@ -65,6 +68,13 @@ void unit_add(Units *units, int owner, int type, int x, int y, int board_dimensi
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x);
 
 BattleResult unit_attack(Units *units, int defender_index, int attacker_index);
+
+void unit_replenish_health(Units *units, int unit_index);
+
+void unit_replenish_movement(Units *units, int unit_index);
+
+void unit_purchase(int player_index, Resources *resources, Units *units, UnitType unit_type, int x, int y,
+                   int board_dimension_x, int board_dimension_y);
 
 bool unit_can_move(Units *units, int destination_x, int destination_y, int board_dimension_x);
 

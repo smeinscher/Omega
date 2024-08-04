@@ -417,50 +417,11 @@ void board_handle_tile_click(Board *board)
             bool can_move = in_board_moveable_tiles(board, move_x, move_y);
             if (can_attack)
             {
-                // attack
                 int enemy_unit_index =
                     board->units->unit_tile_occupation_status[move_y * board->board_dimension_x + move_x];
-                board->units->unit_movement_points[unit_index] -= 2.0f;
-                switch (unit_attack(board->units, enemy_unit_index, unit_index))
-                {
-                case NO_UNITS_DESTROYED: {
-                    DynamicIntArray *da =
-                        hex_grid_find_path(board, board->selected_tile_index_x, board->selected_tile_index_y, move_x,
-                                           move_y, board->board_dimension_x, board->board_dimension_y);
-                    if (da->used >= 2)
-                    {
-                        move_x = da->array[0];
-                        move_y = da->array[1];
-                    }
-                    else
-                    {
-                        move_x = board->selected_tile_index_x;
-                        move_y = board->selected_tile_index_y;
-                    }
-                    break;
-                }
-                case DEFENDER_DESTROYED: {
-                    unit_remove(board->units, enemy_unit_index, move_x, move_y, board->board_dimension_x);
-                    break;
-                }
-                case ATTACKER_DESTROYED: {
-                    can_attack = false;
-                    can_move = false;
-                    unit_remove(board->units, unit_index, board->selected_tile_index_x, board->selected_tile_index_y,
-                                board->board_dimension_x);
-                    break;
-                }
-                case BOTH_DESTROYED: {
-                    can_attack = false;
-                    can_move = false;
-                    unit_remove(board->units, enemy_unit_index, move_x, move_y, board->board_dimension_x);
-                    unit_remove(board->units, unit_index, board->selected_tile_index_x, board->selected_tile_index_y,
-                                board->board_dimension_x);
-                    break;
-                }
-                }
+                board_process_attack(board, enemy_unit_index, unit_index);
             }
-            if (can_attack || can_move)
+            else if (can_move)
             {
                 unit_move(board->units, unit_index, board->selected_tile_index_x, board->selected_tile_index_y, move_x,
                           move_y, board->board_dimension_x, board->board_dimension_y);
@@ -776,6 +737,12 @@ void board_update_border(Board *board)
 
 void board_process_turn(Board *board)
 {
+    // TODO: maybe do this in a function
+    da_int_clear(board->board_moveable_tiles);
+    da_int_clear(board->board_attackable_tiles);
+    board->selected_tile_index_x = -1;
+    board->selected_tile_index_y = -1;
+    board->selected_point = -1;
     if (board->board_current_turn % board->player_count == board->player_count - 1)
     {
         DynamicIntArray moved_units;
@@ -818,15 +785,57 @@ void board_process_turn(Board *board)
         planet_orbit(board->planets);
     }
 
-    for (int i = 0; i < board->units->unit_buffer_size; i++)
-    {
-        if (board->units->unit_owner[i] == board->board_current_turn % board->player_count + 1)
-        {
-            // TODO: replace 4.0f with variable representing max unit movement per turn
-            board->units->unit_movement_points[i] = 4.0f;
-        }
-    }
     board->board_current_turn++;
+}
+
+void board_process_attack(Board *board, int defender_index, int attacker_index)
+{
+    int move_x = board->units->unit_indices[defender_index * 2];
+    int move_y = board->units->unit_indices[defender_index * 2 + 1];
+    switch (unit_attack(board->units, defender_index, attacker_index))
+    {
+    case NO_UNITS_DESTROYED: {
+        DynamicIntArray *da = hex_grid_find_path(board, board->units->unit_indices[attacker_index * 2],
+                                                 board->units->unit_indices[attacker_index * 2 + 1], move_x, move_y,
+                                                 board->board_dimension_x, board->board_dimension_y);
+        if (da == NULL)
+        {
+            printf("ruh row\n");
+            return;
+        }
+        if (da->used >= 2)
+        {
+            move_x = da->array[0];
+            move_y = da->array[1];
+        }
+        else
+        {
+            move_x = board->units->unit_indices[attacker_index * 2];
+            move_y = board->units->unit_indices[attacker_index * 2 + 1];
+        }
+        da_int_free(da);
+        free(da);
+        break;
+    }
+    case DEFENDER_DESTROYED: {
+        unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
+        break;
+    }
+    case ATTACKER_DESTROYED: {
+        unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
+                    board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
+        return;
+    }
+    case BOTH_DESTROYED: {
+        unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
+        unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
+                    board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
+        return;
+    }
+    }
+    unit_move(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
+              board->units->unit_indices[attacker_index * 2 + 1], move_x, move_y, board->board_dimension_x,
+              board->board_dimension_y);
 }
 
 bool board_tile_is_occupied(Board *board, int x, int y)

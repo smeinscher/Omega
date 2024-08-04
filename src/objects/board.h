@@ -72,7 +72,7 @@ void board_update_border(Board *board);
 
 void board_process_turn(Board *board);
 
-bool board_tile_is_valid(Board *board, int x, int y);
+void board_process_attack(Board *board, int defender_index, int attacker_index);
 
 bool board_tile_is_occupied(Board *board, int x, int y);
 

@@ -13,6 +13,12 @@ static float g_health_bar_size_y = BOARD_HEX_TILE_HEIGHT / 12.0f;
 static float g_health_bar_offset_x = BOARD_HEX_TILE_WIDTH / 4.0f;
 static float g_health_bar_offset_y = BOARD_HEX_TILE_HEIGHT / 2.0f - (BOARD_HEX_TILE_HEIGHT / 3.0f);
 
+// TODO: set this up in a file
+static float unit_base_damage[] = {0.0f, 50.0f, 10.0f, 0.0f};
+static float unit_base_health[] = {50.0f, 400.0f, 80.0f, 600.0f};
+static float unit_base_movement[] = {4.0f, 1.0f, 2.0f, 0.0f};
+static int unit_base_resource_cost[] = {0, 50, 500, 28, 150, 4250, 86, 350, 8125};
+
 Units *units_create(int board_dimension_x, int board_dimension_y)
 {
     Units *units = malloc(sizeof(Units));
@@ -35,6 +41,7 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     units->unit_tile_ownership_status = NULL;
     units->unit_movement_points = NULL;
     units->unit_type = NULL;
+    units->unit_indices = NULL;
 
     da_int_init(&units->unit_freed_indices, 4);
 
@@ -137,6 +144,14 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
         return NULL;
     }
 
+    units->unit_indices = malloc(sizeof(int) * 2);
+    if (units->unit_indices == NULL)
+    {
+        printf("Error allocating unit_indices\n");
+        units_destroy(units);
+        return NULL;
+    }
+
     unit_add(units, 1, DROID, 1, 0, board_dimension_x, board_dimension_y);
     unit_add(units, 2, DROID, 1, board_dimension_y - 1, board_dimension_x, board_dimension_y);
     unit_add(units, 3, DROID, board_dimension_x - 2, 0, board_dimension_x, board_dimension_y);
@@ -157,6 +172,7 @@ void unit_realloc(Units *units)
     realloc_float(&units->unit_health_colors, units->unit_buffer_size * 24);
     realloc_float(&units->unit_movement_points, units->unit_buffer_size);
     realloc_int(&units->unit_type, units->unit_buffer_size);
+    realloc_int(&units->unit_indices, units->unit_buffer_size * 2);
 }
 
 void unit_clear_vertices(Units *units)
@@ -187,10 +203,12 @@ void unit_add(Units *units, int owner, int type, int x, int y, int board_dimensi
 
     units->unit_tile_occupation_status[y * board_dimension_x + x] = new_unit_index;
     units->unit_owner[new_unit_index] = owner;
-    units->unit_health[new_unit_index] = 100.0f;
+    units->unit_health[new_unit_index] = unit_base_health[type];
     // TODO: replace 2.0f with something else
-    units->unit_movement_points[new_unit_index] = 4.0f;
+    units->unit_movement_points[new_unit_index] = 0.0f;
     units->unit_type[new_unit_index] = type;
+    units->unit_indices[new_unit_index * 2] = x;
+    units->unit_indices[new_unit_index * 2 + 1] = y;
 
     unit_update_position(units, new_unit_index, x, y);
 
@@ -204,7 +222,7 @@ void unit_add(Units *units, int owner, int type, int x, int y, int board_dimensi
 
     unit_update_health_color(units, new_unit_index);
 
-    unit_claim_territory(units, new_unit_index, x, y, board_dimension_x, board_dimension_y);
+    // unit_claim_territory(units, new_unit_index, x, y, board_dimension_x, board_dimension_y);
 }
 
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x)
@@ -220,15 +238,26 @@ void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension
     memset(units->unit_health_uvs + unit_index * 12, 0, 12 * sizeof(float));
     memset(units->unit_health_colors + unit_index * 24, 0, 24 * sizeof(float));
 
+    units->unit_indices[unit_index * 2] = -1;
+    units->unit_indices[unit_index * 2 + 1] = -1;
+
     units->unit_update_flags |= UNIT_UPDATE | UNIT_UPDATE_HEALTH;
 }
 
 BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
 {
+    units->unit_movement_points[attacker_index] = 0.0f;
     // TODO: damage based on exp/level, and current health
     // TODO: also, find better random
-    units->unit_health[defender_index] -= (float)(rand() % 10000) / 100.0f;
-    units->unit_health[attacker_index] -= (float)(rand() % 10000) / 100.0f;
+    units->unit_health[defender_index] -=
+        (float)(rand() % ((int)unit_base_damage[units->unit_type[attacker_index]] * 100)) /
+        unit_base_damage[units->unit_type[attacker_index]];
+    if (units->unit_type[defender_index] != WORKER)
+    {
+        units->unit_health[attacker_index] -=
+            (float)(rand() % ((int)unit_base_damage[units->unit_type[defender_index]]) * 100) /
+            unit_base_damage[units->unit_type[defender_index]];
+    }
     if (units->unit_health[defender_index] > 0.0f && units->unit_health[attacker_index] > 0.0f)
     {
         unit_update_health_position(units, defender_index);
@@ -249,6 +278,35 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     return BOTH_DESTROYED;
 }
 
+void unit_replenish_health(Units *units, int unit_index)
+{
+    units->unit_health[unit_index] += unit_base_health[units->unit_type[unit_index]] / 4.0f;
+    if (units->unit_health[unit_index] >= unit_base_health[units->unit_type[unit_index]])
+    {
+        units->unit_health[unit_index] = unit_base_health[units->unit_type[unit_index]];
+    }
+    unit_update_health_position(units, unit_index);
+}
+
+void unit_replenish_movement(Units *units, int unit_index)
+{
+    units->unit_movement_points[unit_index] = unit_base_movement[units->unit_type[unit_index]];
+}
+
+void unit_purchase(int player_index, Resources *resources, Units *units, UnitType unit_type, int x, int y,
+                   int board_dimension_x, int board_dimension_y)
+{
+    if (resources->radioactive_material_count[player_index] >= unit_base_resource_cost[unit_type * 3] &&
+        resources->rare_metals_count[player_index] >= unit_base_resource_cost[unit_type * 3 + 1] &&
+        resources->common_metals_count[player_index] >= unit_base_resource_cost[unit_type * 3 + 2])
+    {
+        resources->radioactive_material_count[player_index] -= unit_base_resource_cost[unit_type * 3];
+        resources->rare_metals_count[player_index] -= unit_base_resource_cost[unit_type * 3 + 1];
+        resources->common_metals_count[player_index] -= unit_base_resource_cost[unit_type * 3 + 2];
+        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
+    }
+}
+
 bool unit_can_move(Units *units, int destination_x, int destination_y, int board_dimension_x)
 {
     return units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] == -1;
@@ -259,7 +317,7 @@ void unit_move(Units *units, int unit_index, int current_x, int current_y, int d
 {
     if (!unit_can_move(units, destination_x, destination_y, board_dimension_x))
     {
-        printf("Can not make this move\n");
+        printf("Can not make this move:\n\t%d, %d -> %d, %d\n", current_x, current_y, destination_x, destination_y);
         return;
     }
     units->unit_tile_occupation_status[current_y * board_dimension_x + current_x] = -1;
@@ -269,7 +327,9 @@ void unit_move(Units *units, int unit_index, int current_x, int current_y, int d
     hex_grid_offset_to_axial(current_x, current_y, &start_q, &start_r);
     hex_grid_offset_to_axial(destination_x, destination_y, &target_q, &target_r);
     units->unit_movement_points[unit_index] -= (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
-    unit_claim_territory(units, unit_index, destination_x, destination_y, board_dimension_x, board_dimension_y);
+    units->unit_indices[unit_index * 2] = destination_x;
+    units->unit_indices[unit_index * 2 + 1] = destination_y;
+    // unit_claim_territory(units, unit_index, destination_x, destination_y, board_dimension_x, board_dimension_y);
 }
 
 void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_y, int b_x, int b_y,
@@ -292,11 +352,15 @@ void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_
     {
         units->unit_movement_points[unit_index_a] -=
             (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
+        units->unit_indices[unit_index_a * 2] = b_x;
+        units->unit_indices[unit_index_a * 2 + 1] = b_y;
     }
     if (unit_index_b != -1)
     {
         units->unit_movement_points[unit_index_b] -=
             (float)hex_grid_get_axial_distance(target_q, target_r, start_q, start_r);
+        units->unit_indices[unit_index_b * 2] = a_x;
+        units->unit_indices[unit_index_b * 2 + 1] = a_y;
     }
 }
 
@@ -428,8 +492,9 @@ void unit_update_health_position(Units *units, int unit_index)
     units->unit_health_positions[unit_index * 12] = units->unit_positions[unit_index * 12] + g_health_bar_offset_x;
     units->unit_health_positions[unit_index * 12 + 1] =
         units->unit_positions[unit_index * 12 + 3] + g_health_bar_offset_y + g_health_bar_size_y;
-    units->unit_health_positions[unit_index * 12 + 2] = units->unit_positions[unit_index * 12] + g_health_bar_offset_x +
-                                                        g_health_bar_size_x * units->unit_health[unit_index] / 100.0f;
+    units->unit_health_positions[unit_index * 12 + 2] =
+        units->unit_positions[unit_index * 12] + g_health_bar_offset_x +
+        g_health_bar_size_x * units->unit_health[unit_index] / unit_base_health[units->unit_type[unit_index]];
     units->unit_health_positions[unit_index * 12 + 3] =
         units->unit_positions[unit_index * 12 + 3] + g_health_bar_offset_y;
     units->unit_health_positions[unit_index * 12 + 4] = units->unit_positions[unit_index * 12] + g_health_bar_offset_x;
@@ -438,13 +503,14 @@ void unit_update_health_position(Units *units, int unit_index)
     units->unit_health_positions[unit_index * 12 + 6] = units->unit_positions[unit_index * 12] + g_health_bar_offset_x;
     units->unit_health_positions[unit_index * 12 + 7] =
         units->unit_positions[unit_index * 12 + 3] + g_health_bar_offset_y + g_health_bar_size_y;
-    units->unit_health_positions[unit_index * 12 + 8] = units->unit_positions[unit_index * 12] + g_health_bar_offset_x +
-                                                        g_health_bar_size_x * units->unit_health[unit_index] / 100.0f;
+    units->unit_health_positions[unit_index * 12 + 8] =
+        units->unit_positions[unit_index * 12] + g_health_bar_offset_x +
+        g_health_bar_size_x * units->unit_health[unit_index] / unit_base_health[units->unit_type[unit_index]];
     units->unit_health_positions[unit_index * 12 + 9] =
         units->unit_positions[unit_index * 12 + 3] + g_health_bar_offset_y;
-    units->unit_health_positions[unit_index * 12 + 10] = units->unit_positions[unit_index * 12] +
-                                                         g_health_bar_offset_x +
-                                                         g_health_bar_size_x * units->unit_health[unit_index] / 100.0f;
+    units->unit_health_positions[unit_index * 12 + 10] =
+        units->unit_positions[unit_index * 12] + g_health_bar_offset_x +
+        g_health_bar_size_x * units->unit_health[unit_index] / unit_base_health[units->unit_type[unit_index]];
     units->unit_health_positions[unit_index * 12 + 11] =
         units->unit_positions[unit_index * 12 + 3] + g_health_bar_offset_y + g_health_bar_size_y;
 
@@ -504,6 +570,8 @@ void units_clear(Units *units)
     units->unit_tile_occupation_status = NULL;
     free(units->unit_tile_ownership_status);
     units->unit_tile_ownership_status = NULL;
+    free(units->unit_indices);
+    units->unit_indices = NULL;
     da_int_free(&units->unit_freed_indices);
 }
 
