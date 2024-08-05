@@ -78,11 +78,12 @@ Planets *planets_create(int board_dimension_x, int board_dimension_y)
     }
 
     planet_add(planets, 0.6f, SUN, 0, board_dimension_x / 2, board_dimension_y / 2);
-    planet_add(planets, 0.1f, HOT, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
+    planet_add(planets, 0.1f, MERCURY, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
+    planet_add(planets, 0.15f, VENUS, 2, board_dimension_x / 2 + 2, board_dimension_y / 2 - 2);
     planet_add(planets, 0.15f, EARTH, 3, board_dimension_x / 2, board_dimension_y / 2 + 3);
-    planet_add(planets, 0.13f, MARS, 5, board_dimension_x / 2 + 5, board_dimension_y / 2);
-    planet_add(planets, 0.25f, NEPTUNE, 8, board_dimension_x / 2 - 8, board_dimension_y / 2);
-    int asteroids_distance_from_sun = 9;
+    planet_add(planets, 0.13f, MARS, 4, board_dimension_x / 2 + 5, board_dimension_y / 2);
+    //planet_add(planets, 0.25f, NEPTUNE, 8, board_dimension_x / 2 - 8, board_dimension_y / 2);
+    int asteroids_distance_from_sun = 5;
     int q = 0;
     int r = -asteroids_distance_from_sun;
     for (int i = 0; i < asteroids_distance_from_sun * 6; i++)
