@@ -24,9 +24,9 @@ typedef struct Players
 
 Players *players_create(int player_count, int human_players_count, int *human_players);
 
-void player_add(Players *players, float *player_color, bool is_human);
+void player_add(Board *board, Players *players, float *player_color, bool is_human);
 
-void player_remove(Players *players, int player_index);
+void player_remove(Board *board, Players *players, int player_index);
 
 void player_start_turn(Board *board, Players *players, int player_index);
 

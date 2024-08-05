@@ -810,8 +810,11 @@ void board_process_attack(Board *board, int defender_index, int attacker_index)
         }
         else
         {
+            /*
             move_x = board->units->unit_indices[attacker_index * 2];
             move_y = board->units->unit_indices[attacker_index * 2 + 1];
+        */
+            return;
         }
         da_int_free(da);
         free(da);

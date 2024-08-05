@@ -66,13 +66,20 @@ Players *players_create(int player_count, int human_players_count, int *human_pl
     return players;
 }
 
-void player_add(Players *players, float *player_color, bool is_human)
+void player_add(Board *board, Players *players, float *player_color,bool is_human)
 {
     printf("player_add not implemented\n");
 }
 
-void player_remove(Players *players, int player_index)
+void player_remove(Board *board, Players *players, int player_index)
 {
+    for (int i = 0; i < board->board_dimension_x * board->board_dimension_y; i++)
+    {
+        if (board->units->unit_tile_ownership_status[i] == player_index + 1)
+        {
+            board->units->unit_tile_ownership_status[i] = -1;
+        }
+    }
     printf("player_remove not implemented\n");
 }
 
@@ -107,7 +114,7 @@ void player_start_turn(Board *board, Players *players, int player_index)
                         int r = rand() % possible_attacks->used / 2;
                         int defending_unit_index =
                             board->units->unit_tile_occupation_status[possible_attacks->array[r * 2 + 1] *
-                                                                          board->board_dimension_x +
+                                                                      board->board_dimension_x +
                                                                       possible_attacks->array[r * 2]];
                         if (defending_unit_index != -1)
                         {
