@@ -94,8 +94,8 @@ bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitTy
 
 bool unit_can_move(Units *units, int unit_index, int destination_x, int destination_y, int board_dimension_x);
 
-void unit_move(Units *units, int unit_index, int current_x, int current_y, int destination_x, int destination_y,
-               int board_dimension_x, int board_dimension_y);
+void unit_move(Units *units, int unit_index, DynamicIntArray *move_path,
+               int end_x, int end_y, int board_dimension_x, int board_dimension_y);
 
 void unit_stash_position(int x, int y);
 

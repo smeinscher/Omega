@@ -296,7 +296,7 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     // TODO: also, find better random
     float attacker_base_damage = unit_base_damage[units->unit_type[attacker_index]];
     units->unit_health[defender_index] -= ((float)(rand() % ((int)attacker_base_damage * 100)) + attacker_base_damage) /
-                                          unit_base_damage[units->unit_type[attacker_index]];
+        unit_base_damage[units->unit_type[attacker_index]];
     if (units->unit_type[defender_index] != WORKER && units->unit_type[defender_index] != STATION)
     {
         float defender_base_damage = unit_base_damage[units->unit_type[defender_index]];
@@ -310,12 +310,12 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
         unit_update_health_position(units, attacker_index);
         return NO_UNITS_DESTROYED;
     }
-    else if (units->unit_health[defender_index] <= 0.0f && units->unit_health[attacker_index] > 0.0f)
+    if (units->unit_health[defender_index] <= 0.0f && units->unit_health[attacker_index] > 0.0f)
     {
         unit_update_health_position(units, attacker_index);
         return DEFENDER_DESTROYED;
     }
-    else if (units->unit_health[defender_index] >= 0.0f && units->unit_health[attacker_index] <= 0.0f)
+    if (units->unit_health[defender_index] >= 0.0f && units->unit_health[attacker_index] <= 0.0f)
     {
         unit_update_health_position(units, defender_index);
         return ATTACKER_DESTROYED;
@@ -364,7 +364,7 @@ bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitTy
         *score -= 150;
         return true;
     }
-    else if (unit_type == BATTLESHIP && *score >= 410)
+    if (unit_type == BATTLESHIP && *score >= 410)
     {
         unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
         *score -= 410;
@@ -379,27 +379,22 @@ bool unit_can_move(Units *units, int unit_index, int destination_x, int destinat
            units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] == unit_index;
 }
 
-void unit_move(Units *units, int unit_index, int current_x, int current_y, int destination_x, int destination_y,
-               int board_dimension_x, int board_dimension_y)
+void unit_move(Units *units, int unit_index, DynamicIntArray *move_path,
+               int end_x, int end_y, int board_dimension_x, int board_dimension_y)
 {
-    if (current_x == -1 && current_y == -1)
-    {
-        current_x = g_stash_x;
-        current_y = g_stash_y;
-
-        g_stash_x = -1;
-        g_stash_y = -1;
-    }
-    if (!unit_can_move(units, unit_index, destination_x, destination_y, board_dimension_x))
-    {
-        printf("Can not make this move:\n\t%d, %d -> %d, %d\n", current_x, current_y, destination_x, destination_y);
-        return;
-    }
     //    units->unit_tile_occupation_status[current_y * board_dimension_x + current_x] = -1;
     //    units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] = unit_index;
     //    units->unit_indices[unit_index * 2] = destination_x;
     //    units->unit_indices[unit_index * 2 + 1] = destination_y;
-    unit_claim_territory(units, unit_index, destination_x, destination_y, board_dimension_x, board_dimension_y);
+    for (int i = 0; i < move_path->used; i += 2)
+    {
+        int x = move_path->array[i];
+        int y = move_path->array[i + 1];
+        unit_claim_territory(units, unit_index, x, y, board_dimension_x,
+                             board_dimension_y);
+    }
+    unit_claim_territory(units, unit_index, end_x, end_y, board_dimension_x,
+                         board_dimension_y);
     //    printf("Unit %d of Player %d moved from %d, %d to %d, %d\n", unit_index, units->unit_owner[unit_index],
     //    current_x,
     //           current_y, destination_x, destination_y);
@@ -426,11 +421,11 @@ void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_
         unit_add_movement_animation(units, unit_index_b, b_x, b_y, a_x, a_y, REGULAR);
         unit_occupy_new_tile(units, unit_index_b, b_x, b_y, a_x, a_y, board_dimension_x);
     }
-    int start_q, start_r, target_q, target_r;
-    hex_grid_offset_to_axial(a_x, a_y, &start_q, &start_r);
-    hex_grid_offset_to_axial(b_x, b_y, &target_q, &target_r);
     if (strategic_swap)
     {
+        int start_q, start_r, target_q, target_r;
+        hex_grid_offset_to_axial(a_x, a_y, &start_q, &start_r);
+        hex_grid_offset_to_axial(b_x, b_y, &target_q, &target_r);
         units->unit_movement_points[unit_index_a] -=
             (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
         units->unit_movement_points[unit_index_b] -=

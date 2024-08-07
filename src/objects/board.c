@@ -370,6 +370,23 @@ bool in_board_moveable_tiles(Board *board, int move_x, int move_y)
     return false;
 }
 
+void board_handle_tile_placement(Board *board, UnitType unit_type, int player_count, int *score)
+{
+    if (board->board_moveable_tiles != NULL)
+    {
+        if (in_board_moveable_tiles(board, board->mouse_tile_index_x, board->mouse_tile_index_y))
+        {
+            int player_index = board->board_current_turn % player_count;
+            unit_purchase_with_score(board->units, player_index, score, unit_type,
+                                     board->mouse_tile_index_x,
+                                     board->mouse_tile_index_y, board->board_dimension_x, board->board_dimension_y);
+        }
+        da_int_free(board->board_moveable_tiles);
+        free(board->board_moveable_tiles);
+        board->board_moveable_tiles = NULL;
+    }
+}
+
 void board_handle_tile_click(Board *board)
 {
     if (board->board_highlighted_path != NULL)
@@ -444,7 +461,10 @@ void board_handle_tile_click(Board *board)
         board->last_selected_tile_index_y = board->selected_tile_index_y;
         board->selected_tile_index_x = -1;
         board->selected_tile_index_y = -1;
-        da_int_clear(board->board_moveable_tiles);
+        if (board->board_moveable_tiles != NULL)
+        {
+            da_int_clear(board->board_moveable_tiles);
+        }
         da_int_clear(board->board_attackable_tiles);
         memset(board->board_fill_positions, 0, 12 * board->board_dimension_x * board->board_dimension_y * 2);
         memset(board->board_fill_colors, 0, 12 * board->board_dimension_x * board->board_dimension_y * 4);
@@ -594,34 +614,39 @@ void board_update_fill_vertices(Board *board)
     float mod_g = 1.0f;
     float mod_b = 1.0f;
     float mod_a = selected_tile_color[3];
-    for (int i = 0; i < board->board_moveable_tiles->used; i += 2)
+    if (board->board_moveable_tiles != NULL)
     {
-        int x = board->board_moveable_tiles->array[i];
-        int y = board->board_moveable_tiles->array[i + 1];
-        int highlighted_tile_index = (y * board->board_dimension_x + x) * 12;
-        board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, highlighted_tile_index * 2,
-                                coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
-                                board->board_dimension_x, board->board_dimension_y);
-        mod_r = 1.0f;
-        mod_g = 1.0f;
-        mod_b = 1.0f;
-        mod_a = highlighted_tile_color[3];
-        if (board->mouse_tile_index_x == x && board->mouse_tile_index_y == y)
+        for (int i = 0; i < board->board_moveable_tiles->used; i += 2)
         {
-            mod_r = hovered_tile_color[0];
-            mod_g = hovered_tile_color[1];
-            mod_b = hovered_tile_color[2];
-            mod_a = hovered_tile_color[3];
+            int x = board->board_moveable_tiles->array[i];
+            int y = board->board_moveable_tiles->array[i + 1];
+            int highlighted_tile_index = (y * board->board_dimension_x + x) * 12;
+            board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions,
+                                    highlighted_tile_index * 2,
+                                    coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
+                                    board->board_dimension_x, board->board_dimension_y);
+            mod_r = 1.0f;
+            mod_g = 1.0f;
+            mod_b = 1.0f;
+            mod_a = highlighted_tile_color[3];
+            if (board->mouse_tile_index_x == x && board->mouse_tile_index_y == y)
+            {
+                mod_r = hovered_tile_color[0];
+                mod_g = hovered_tile_color[1];
+                mod_b = hovered_tile_color[2];
+                mod_a = hovered_tile_color[3];
+            }
+            board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4,
+                                  highlighted_tile_color[0] * mod_r,
+                                  highlighted_tile_color[1] * mod_g, highlighted_tile_color[2] * mod_b, mod_a);
+            /*
+                        board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4,
+                                              highlighted_tile_friendly_color[0] * mod_r,
+                                              highlighted_tile_friendly_color[1] * mod_g,
+                                              highlighted_tile_friendly_color[2] * mod_b,
+               highlighted_tile_friendly_color[3]);
+            */
         }
-        board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4, highlighted_tile_color[0] * mod_r,
-                              highlighted_tile_color[1] * mod_g, highlighted_tile_color[2] * mod_b, mod_a);
-        /*
-                    board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4,
-                                          highlighted_tile_friendly_color[0] * mod_r,
-                                          highlighted_tile_friendly_color[1] * mod_g,
-                                          highlighted_tile_friendly_color[2] * mod_b,
-           highlighted_tile_friendly_color[3]);
-        */
     }
     if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
         board->selected_tile_index_y < 0 || board->selected_tile_index_y >= board->board_dimension_y)
@@ -750,7 +775,10 @@ void board_update_border(Board *board)
 void board_process_turn(Board *board)
 {
     // TODO: maybe do this in a function
-    da_int_clear(board->board_moveable_tiles);
+    if (board->board_moveable_tiles != NULL)
+    {
+        da_int_clear(board->board_moveable_tiles);
+    }
     da_int_clear(board->board_attackable_tiles);
     board->selected_tile_index_x = -1;
     board->selected_tile_index_y = -1;

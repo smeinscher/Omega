@@ -64,6 +64,8 @@ void board_reset(Board **board);
 
 void board_reset_new_dimensions(Board **board, int new_board_dimension_x, int new_board_dimension_y);
 
+void board_handle_tile_placement(Board *board, UnitType unit_type, int player_count, int *score);
+
 void board_handle_tile_click(Board *board);
 
 void board_update_hovered_tile(Board *board, float mouse_board_pos_x, float mouse_board_pos_y);
