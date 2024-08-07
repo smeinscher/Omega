@@ -46,4 +46,8 @@ int camera_get_viewport_width();
 
 int camera_get_viewport_height();
 
+void camera_set_viewport_width(int viewport_width);
+
+void camera_set_viewport_height(int viewport_height);
+
 #endif // OMEGA_CAMERA_H

@@ -13,7 +13,6 @@
 #define FULLSCREEN_MODE NULL
 
 static GLFWwindow *g_main_window = NULL;
-static GLFWwindow *g_loading_window = NULL;
 
 void platform_init()
 {
@@ -27,23 +26,14 @@ void platform_init()
 
 int platform_create_window(int width, int height, const char *title)
 {
-    GLFWwindow *window = glfwCreateWindow(width, height, title, FULLSCREEN_MODE, NULL);
-    if (window == NULL)
+    g_main_window = glfwCreateWindow(width, height, title, FULLSCREEN_MODE, NULL);
+    if (g_main_window == NULL)
     {
         // TODO: logging stuff
         printf("Error: failed to create window");
         return -1;
     }
-    glfwMakeContextCurrent(window);
-
-    if (g_main_window == NULL)
-    {
-        g_main_window = window;
-    }
-    else
-    {
-        g_loading_window = window;
-    }
+    glfwMakeContextCurrent(g_main_window);
 
     return 0;
 }
@@ -101,4 +91,18 @@ double platform_get_time()
 void platform_set_vsync(int interval)
 {
     glfwSwapInterval(interval);
+}
+
+int platform_get_window_width()
+{
+    int width, height;
+    glfwGetWindowSize(g_main_window, &width, &height);
+    return width;
+}
+
+int platform_get_window_height()
+{
+    int width, height;
+    glfwGetWindowSize(g_main_window, &width, &height);
+    return height;
 }

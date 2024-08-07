@@ -5,6 +5,7 @@
 #include "units.h"
 #include "../util/general_helpers.h"
 #include "board.h"
+#include <cglm/util.h>
 #include <memory.h>
 #include <stdlib.h>
 
@@ -14,10 +15,13 @@ static float g_health_bar_offset_x = BOARD_HEX_TILE_WIDTH / 4.0f;
 static float g_health_bar_offset_y = BOARD_HEX_TILE_HEIGHT / 2.0f - (BOARD_HEX_TILE_HEIGHT / 3.0f);
 
 // TODO: set this up in a file
-static float unit_base_damage[] = {0.0f, 50.0f, 10.0f, 0.0f};
-static float unit_base_health[] = {50.0f, 400.0f, 80.0f, 600.0f};
+static float unit_base_damage[] = {0.0f, 400.0f, 160.0f, 0.0f};
+static float unit_base_health[] = {50.0f, 400.0f, 100.0f, 500.0f};
 static float unit_base_movement[] = {4.0f, 1.0f, 2.0f, 0.0f};
-static int unit_base_resource_cost[] = {0, 50, 500, 28, 150, 4250, 86, 350, 8125};
+static int unit_base_resource_cost[] = {0, 50, 500, 40, 150, 3000, 10, 50, 1250, 0, 0, 0};
+
+static int g_stash_x = -1;
+static int g_stash_y = -1;
 
 Units *units_create(int board_dimension_x, int board_dimension_y)
 {
@@ -29,6 +33,8 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     }
 
     units->unit_buffer_size = 0;
+    units->unit_update_flags = 0;
+    units->unit_animation_progress = 0.0f;
     units->unit_owner = NULL;
     units->unit_health = NULL;
     units->unit_positions = NULL;
@@ -44,6 +50,10 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     units->unit_indices = NULL;
 
     da_int_init(&units->unit_freed_indices, 4);
+
+    da_int_init(&units->moves_unit_index, 1);
+    da_int_init(&units->moves_list, 4);
+    da_int_init(&units->move_type, 1);
 
     units->unit_owner = malloc(sizeof(int));
     if (units->unit_owner == NULL)
@@ -153,9 +163,45 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     }
 
     unit_add(units, 1, DROID, 1, 0, board_dimension_x, board_dimension_y);
+    unit_add(units, 1, STATION, 1, 1, board_dimension_x, board_dimension_y);
     unit_add(units, 2, DROID, 1, board_dimension_y - 1, board_dimension_x, board_dimension_y);
+    unit_add(units, 2, STATION, 1, board_dimension_y - 2, board_dimension_x, board_dimension_y);
     unit_add(units, 3, DROID, board_dimension_x - 2, 0, board_dimension_x, board_dimension_y);
+    unit_add(units, 3, STATION, board_dimension_x - 2, 1, board_dimension_x, board_dimension_y);
     unit_add(units, 4, DROID, board_dimension_x - 2, board_dimension_y - 1, board_dimension_x, board_dimension_y);
+    unit_add(units, 4, STATION, board_dimension_x - 2, board_dimension_y - 2, board_dimension_x, board_dimension_y);
+
+    units->unit_tile_ownership_status[1] = 1;
+    units->unit_tile_ownership_status[board_dimension_x] = 1;
+    units->unit_tile_ownership_status[board_dimension_x * 2] = 1;
+    units->unit_tile_ownership_status[board_dimension_x * 2 + 1] = 1;
+    units->unit_tile_ownership_status[board_dimension_x * 2 + 2] = 1;
+    units->unit_tile_ownership_status[board_dimension_x * 1 + 2] = 1;
+    units->unit_tile_ownership_status[board_dimension_x * 1 + 1] = 1;
+
+    units->unit_tile_ownership_status[(board_dimension_y - 3) * board_dimension_x + 1] = 2;
+    units->unit_tile_ownership_status[(board_dimension_y - 2) * board_dimension_x] = 2;
+    units->unit_tile_ownership_status[(board_dimension_y - 1) * board_dimension_x] = 2;
+    units->unit_tile_ownership_status[(board_dimension_y - 1) * board_dimension_x + 1] = 2;
+    units->unit_tile_ownership_status[(board_dimension_y - 1) * board_dimension_x + 2] = 2;
+    units->unit_tile_ownership_status[(board_dimension_y - 2) * board_dimension_x + 2] = 2;
+    units->unit_tile_ownership_status[(board_dimension_y - 2) * board_dimension_x + 1] = 2;
+
+    units->unit_tile_ownership_status[board_dimension_x - 2] = 3;
+    units->unit_tile_ownership_status[2 * board_dimension_x - 3] = 3;
+    units->unit_tile_ownership_status[3 * board_dimension_x - 3] = 3;
+    units->unit_tile_ownership_status[3 * board_dimension_x - 2] = 3;
+    units->unit_tile_ownership_status[3 * board_dimension_x - 1] = 3;
+    units->unit_tile_ownership_status[2 * board_dimension_x - 1] = 3;
+    units->unit_tile_ownership_status[2 * board_dimension_x - 2] = 3;
+
+    units->unit_tile_ownership_status[(board_dimension_y - 2) * board_dimension_x - 2] = 4;
+    units->unit_tile_ownership_status[(board_dimension_y - 1) * board_dimension_x - 3] = 4;
+    units->unit_tile_ownership_status[board_dimension_y * board_dimension_x - 3] = 4;
+    units->unit_tile_ownership_status[board_dimension_y * board_dimension_x - 2] = 4;
+    units->unit_tile_ownership_status[board_dimension_y * board_dimension_x - 1] = 4;
+    units->unit_tile_ownership_status[(board_dimension_y - 1) * board_dimension_x - 1] = 4;
+    units->unit_tile_ownership_status[(board_dimension_y - 1) * board_dimension_x - 2] = 4;
 
     return units;
 }
@@ -204,8 +250,7 @@ void unit_add(Units *units, int owner, int type, int x, int y, int board_dimensi
     units->unit_tile_occupation_status[y * board_dimension_x + x] = new_unit_index;
     units->unit_owner[new_unit_index] = owner;
     units->unit_health[new_unit_index] = unit_base_health[type];
-    // TODO: replace 2.0f with something else
-    units->unit_movement_points[new_unit_index] = 0.0f;
+    units->unit_movement_points[new_unit_index] = unit_base_movement[type];
     units->unit_type[new_unit_index] = type;
     units->unit_indices[new_unit_index * 2] = x;
     units->unit_indices[new_unit_index * 2 + 1] = y;
@@ -222,7 +267,7 @@ void unit_add(Units *units, int owner, int type, int x, int y, int board_dimensi
 
     unit_update_health_color(units, new_unit_index);
 
-    // unit_claim_territory(units, new_unit_index, x, y, board_dimension_x, board_dimension_y);
+    //    unit_claim_territory(units, new_unit_index, x, y, board_dimension_x, board_dimension_y);
 }
 
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x)
@@ -249,13 +294,14 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     units->unit_movement_points[attacker_index] = 0.0f;
     // TODO: damage based on exp/level, and current health
     // TODO: also, find better random
-    units->unit_health[defender_index] -=
-        (float)(rand() % ((int)unit_base_damage[units->unit_type[attacker_index]] * 100)) /
+    float attacker_base_damage = unit_base_damage[units->unit_type[attacker_index]];
+    units->unit_health[defender_index] -= ((float)(rand() % ((int)attacker_base_damage * 100)) + attacker_base_damage) /
         unit_base_damage[units->unit_type[attacker_index]];
-    if (units->unit_type[defender_index] != WORKER)
+    if (units->unit_type[defender_index] != WORKER && units->unit_type[defender_index] != STATION)
     {
+        float defender_base_damage = unit_base_damage[units->unit_type[defender_index]];
         units->unit_health[attacker_index] -=
-            (float)(rand() % ((int)unit_base_damage[units->unit_type[defender_index]]) * 100) /
+            ((float)(rand() % ((int)defender_base_damage * 100)) + defender_base_damage) /
             unit_base_damage[units->unit_type[defender_index]];
     }
     if (units->unit_health[defender_index] > 0.0f && units->unit_health[attacker_index] > 0.0f)
@@ -264,12 +310,12 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
         unit_update_health_position(units, attacker_index);
         return NO_UNITS_DESTROYED;
     }
-    else if (units->unit_health[defender_index] <= 0.0f && units->unit_health[attacker_index] > 0.0f)
+    if (units->unit_health[defender_index] <= 0.0f && units->unit_health[attacker_index] > 0.0f)
     {
         unit_update_health_position(units, attacker_index);
         return DEFENDER_DESTROYED;
     }
-    else if (units->unit_health[defender_index] >= 0.0f && units->unit_health[attacker_index] <= 0.0f)
+    if (units->unit_health[defender_index] >= 0.0f && units->unit_health[attacker_index] <= 0.0f)
     {
         unit_update_health_position(units, defender_index);
         return ATTACKER_DESTROYED;
@@ -280,7 +326,7 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
 
 void unit_replenish_health(Units *units, int unit_index)
 {
-    units->unit_health[unit_index] += unit_base_health[units->unit_type[unit_index]] / 4.0f;
+    units->unit_health[unit_index] += 25.0f;
     if (units->unit_health[unit_index] >= unit_base_health[units->unit_type[unit_index]])
     {
         units->unit_health[unit_index] = unit_base_health[units->unit_type[unit_index]];
@@ -293,7 +339,7 @@ void unit_replenish_movement(Units *units, int unit_index)
     units->unit_movement_points[unit_index] = unit_base_movement[units->unit_type[unit_index]];
 }
 
-void unit_purchase(int player_index, Resources *resources, Units *units, UnitType unit_type, int x, int y,
+bool unit_purchase(int player_index, Resources *resources, Units *units, UnitType unit_type, int x, int y,
                    int board_dimension_x, int board_dimension_y)
 {
     if (resources->radioactive_material_count[player_index] >= unit_base_resource_cost[unit_type * 3] &&
@@ -304,61 +350,94 @@ void unit_purchase(int player_index, Resources *resources, Units *units, UnitTyp
         resources->rare_metals_count[player_index] -= unit_base_resource_cost[unit_type * 3 + 1];
         resources->common_metals_count[player_index] -= unit_base_resource_cost[unit_type * 3 + 2];
         unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
+        return true;
     }
+    return false;
 }
 
-bool unit_can_move(Units *units, int destination_x, int destination_y, int board_dimension_x)
+bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
+                              int board_dimension_x, int board_dimension_y)
 {
-    return units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] == -1;
-}
-
-void unit_move(Units *units, int unit_index, int current_x, int current_y, int destination_x, int destination_y,
-               int board_dimension_x, int board_dimension_y)
-{
-    if (!unit_can_move(units, destination_x, destination_y, board_dimension_x))
+    if (unit_type == DROID && *score >= 150)
     {
-        printf("Can not make this move:\n\t%d, %d -> %d, %d\n", current_x, current_y, destination_x, destination_y);
-        return;
+        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
+        *score -= 150;
+        return true;
     }
-    units->unit_tile_occupation_status[current_y * board_dimension_x + current_x] = -1;
-    units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] = unit_index;
-    unit_update_position(units, unit_index, destination_x, destination_y);
-    int start_q, start_r, target_q, target_r;
-    hex_grid_offset_to_axial(current_x, current_y, &start_q, &start_r);
-    hex_grid_offset_to_axial(destination_x, destination_y, &target_q, &target_r);
-    units->unit_movement_points[unit_index] -= (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
-    units->unit_indices[unit_index * 2] = destination_x;
-    units->unit_indices[unit_index * 2 + 1] = destination_y;
-    // unit_claim_territory(units, unit_index, destination_x, destination_y, board_dimension_x, board_dimension_y);
+    if (unit_type == BATTLESHIP && *score >= 410)
+    {
+        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
+        *score -= 410;
+        return true;
+    }
+    return false;
+}
+
+bool unit_can_move(Units *units, int unit_index, int destination_x, int destination_y, int board_dimension_x)
+{
+    return units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] == -1 ||
+           units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] == unit_index;
+}
+
+void unit_move(Units *units, int unit_index, DynamicIntArray *move_path,
+               int end_x, int end_y, int board_dimension_x, int board_dimension_y)
+{
+    //    units->unit_tile_occupation_status[current_y * board_dimension_x + current_x] = -1;
+    //    units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] = unit_index;
+    //    units->unit_indices[unit_index * 2] = destination_x;
+    //    units->unit_indices[unit_index * 2 + 1] = destination_y;
+    for (int i = 0; i < move_path->used; i += 2)
+    {
+        int x = move_path->array[i];
+        int y = move_path->array[i + 1];
+        unit_claim_territory(units, unit_index, x, y, board_dimension_x,
+                             board_dimension_y);
+    }
+    unit_claim_territory(units, unit_index, end_x, end_y, board_dimension_x,
+                         board_dimension_y);
+    //    printf("Unit %d of Player %d moved from %d, %d to %d, %d\n", unit_index, units->unit_owner[unit_index],
+    //    current_x,
+    //           current_y, destination_x, destination_y);
+}
+
+void unit_stash_position(int x, int y)
+{
+    g_stash_x = x;
+    g_stash_y = y;
 }
 
 void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_y, int b_x, int b_y,
-               int board_dimension_x)
+               int board_dimension_x, bool strategic_swap)
 {
     units->unit_tile_occupation_status[a_y * board_dimension_x + a_x] = unit_index_b;
     units->unit_tile_occupation_status[b_y * board_dimension_x + b_x] = unit_index_a;
     if (unit_index_a != -1)
     {
-        unit_update_position(units, unit_index_a, b_x, b_y);
+        unit_add_movement_animation(units, unit_index_a, a_x, a_y, b_x, b_y, REGULAR);
+        unit_occupy_new_tile(units, unit_index_a, a_x, a_y, b_x, b_y, board_dimension_x);
     }
     if (unit_index_b != -1)
     {
-        unit_update_position(units, unit_index_b, a_x, a_y);
+        unit_add_movement_animation(units, unit_index_b, b_x, b_y, a_x, a_y, REGULAR);
+        unit_occupy_new_tile(units, unit_index_b, b_x, b_y, a_x, a_y, board_dimension_x);
     }
-    int start_q, start_r, target_q, target_r;
-    hex_grid_offset_to_axial(a_x, a_y, &start_q, &start_r);
-    hex_grid_offset_to_axial(b_x, b_y, &target_q, &target_r);
-    if (unit_index_a != -1)
+    if (strategic_swap)
     {
+        int start_q, start_r, target_q, target_r;
+        hex_grid_offset_to_axial(a_x, a_y, &start_q, &start_r);
+        hex_grid_offset_to_axial(b_x, b_y, &target_q, &target_r);
         units->unit_movement_points[unit_index_a] -=
             (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
+        units->unit_movement_points[unit_index_b] -=
+            (float)hex_grid_get_axial_distance(target_q, target_r, start_q, start_r);
+    }
+    if (unit_index_a != -1)
+    {
         units->unit_indices[unit_index_a * 2] = b_x;
         units->unit_indices[unit_index_a * 2 + 1] = b_y;
     }
     if (unit_index_b != -1)
     {
-        units->unit_movement_points[unit_index_b] -=
-            (float)hex_grid_get_axial_distance(target_q, target_r, start_q, start_r);
         units->unit_indices[unit_index_b * 2] = a_x;
         units->unit_indices[unit_index_b * 2 + 1] = a_y;
     }
@@ -546,10 +625,82 @@ void unit_update_health_color(Units *units, int unit_index)
     units->unit_update_flags |= UNIT_UPDATE_HEALTH;
 }
 
+void unit_occupy_new_tile(Units *units, int unit_index, int previous_x, int previous_y, int new_x, int new_y,
+                          int board_dimension_x)
+{
+    if (units->unit_tile_occupation_status[previous_y * board_dimension_x + previous_x] == unit_index)
+    {
+        units->unit_tile_occupation_status[previous_y * board_dimension_x + previous_x] = -1;
+    }
+    units->unit_tile_occupation_status[new_y * board_dimension_x + new_x] = unit_index;
+    units->unit_indices[unit_index * 2] = new_x;
+    units->unit_indices[unit_index * 2 + 1] = new_y;
+    int start_q, start_r, target_q, target_r;
+    hex_grid_offset_to_axial(previous_x, previous_y, &start_q, &start_r);
+    hex_grid_offset_to_axial(new_x, new_y, &target_q, &target_r);
+    units->unit_movement_points[unit_index] -= (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
+}
+
+void unit_add_movement_animation(Units *units, int unit_index, int start_x, int start_y, int end_x, int end_y,
+                                 int move_type)
+{
+    da_int_push_back(&units->moves_unit_index, unit_index);
+    da_int_push_back(&units->moves_list, start_x);
+    da_int_push_back(&units->moves_list, start_y);
+    da_int_push_back(&units->moves_list, end_x);
+    da_int_push_back(&units->moves_list, end_y);
+    da_int_push_back(&units->move_type, move_type);
+}
+
+bool unit_animate_movement(Units *units)
+{
+    int unit_index = units->moves_unit_index.array[0];
+    float start_x = (float)units->moves_list.array[0] * BOARD_HEX_TILE_WIDTH * 0.75f;
+    float start_y = (float)units->moves_list.array[1] * BOARD_HEX_TILE_HEIGHT +
+                    (float)(units->moves_list.array[0] % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
+    float end_x = (float)units->moves_list.array[2] * BOARD_HEX_TILE_WIDTH * 0.75f;
+    float end_y = (float)units->moves_list.array[3] * BOARD_HEX_TILE_HEIGHT +
+                  (float)(units->moves_list.array[2] % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
+    float new_x = glm_lerp(start_x, end_x, units->unit_animation_progress);
+    float new_y = glm_lerp(start_y, end_y, units->unit_animation_progress);
+    units->unit_positions[unit_index * 12] = new_x;
+    units->unit_positions[unit_index * 12 + 1] = new_y + BOARD_HEX_TILE_HEIGHT;
+    units->unit_positions[unit_index * 12 + 2] = new_x + BOARD_HEX_TILE_WIDTH;
+    units->unit_positions[unit_index * 12 + 3] = new_y;
+    units->unit_positions[unit_index * 12 + 4] = new_x;
+    units->unit_positions[unit_index * 12 + 5] = new_y;
+    units->unit_positions[unit_index * 12 + 6] = new_x;
+    units->unit_positions[unit_index * 12 + 7] = new_y + BOARD_HEX_TILE_HEIGHT;
+    units->unit_positions[unit_index * 12 + 8] = new_x + BOARD_HEX_TILE_WIDTH;
+    units->unit_positions[unit_index * 12 + 9] = new_y;
+    units->unit_positions[unit_index * 12 + 10] = new_x + BOARD_HEX_TILE_WIDTH;
+    units->unit_positions[unit_index * 12 + 11] = new_y + BOARD_HEX_TILE_HEIGHT;
+
+    unit_update_health_position(units, unit_index);
+
+    units->unit_update_flags |= UNIT_UPDATE;
+
+    if (units->unit_animation_progress >= 1.0f)
+    {
+        da_int_remove(&units->moves_unit_index, 0);
+        da_int_remove(&units->moves_list, 0);
+        da_int_remove(&units->moves_list, 0);
+        da_int_remove(&units->moves_list, 0);
+        da_int_remove(&units->moves_list, 0);
+        da_int_remove(&units->move_type, 0);
+        units->unit_animation_progress = 0.0f;
+        return true;
+    }
+    // TODO: replace 0.05f with variable
+    units->unit_animation_progress += 0.05f;
+    return false;
+}
+
 void units_clear(Units *units)
 {
     units->unit_buffer_size = 0;
     units->unit_update_flags = 0;
+    units->unit_animation_progress = 0.0f;
     free(units->unit_owner);
     units->unit_owner = NULL;
     free(units->unit_positions);
@@ -573,6 +724,9 @@ void units_clear(Units *units)
     free(units->unit_indices);
     units->unit_indices = NULL;
     da_int_free(&units->unit_freed_indices);
+    da_int_free(&units->moves_unit_index);
+    da_int_free(&units->moves_list);
+    da_int_free(&units->move_type);
 }
 
 void units_destroy(Units *units)

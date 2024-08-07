@@ -9,9 +9,13 @@
 #include "resources.h"
 #include <stdbool.h>
 
+#define PLAYER_ENDED_TURN 0x1
+
 typedef struct Players
 {
     int player_count;
+
+    int player_flags;
 
     int human_players_count;
     int *human_players;
@@ -19,10 +23,16 @@ typedef struct Players
     int *player_score;
     float *player_color;
 
+    int *desired_unit_purchase;
+
+    int *player_unit_count;
+
     Resources *resources;
 } Players;
 
 Players *players_create(int player_count, int human_players_count, int *human_players);
+
+void players_reset(Players **players);
 
 void player_add(Board *board, Players *players, float *player_color, bool is_human);
 

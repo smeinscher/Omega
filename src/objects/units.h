@@ -29,10 +29,20 @@ typedef enum BattleResult
     BOTH_DESTROYED
 } BattleResult;
 
+enum MoveType
+{
+    REGULAR,
+    ATTACK,
+    RETREAT,
+    SWAP
+};
+
 typedef struct Units
 {
     int unit_buffer_size;
     int unit_update_flags;
+
+    float unit_animation_progress;
 
     int *unit_owner;
     float *unit_positions;
@@ -55,6 +65,9 @@ typedef struct Units
 
     DynamicIntArray unit_freed_indices;
 
+    DynamicIntArray moves_unit_index;
+    DynamicIntArray moves_list;
+    DynamicIntArray move_type;
 } Units;
 
 Units *units_create(int board_dimension_x, int board_dimension_y);
@@ -73,16 +86,21 @@ void unit_replenish_health(Units *units, int unit_index);
 
 void unit_replenish_movement(Units *units, int unit_index);
 
-void unit_purchase(int player_index, Resources *resources, Units *units, UnitType unit_type, int x, int y,
+bool unit_purchase(int player_index, Resources *resources, Units *units, UnitType unit_type, int x, int y,
                    int board_dimension_x, int board_dimension_y);
 
-bool unit_can_move(Units *units, int destination_x, int destination_y, int board_dimension_x);
+bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
+                              int board_dimension_x, int board_dimension_y);
 
-void unit_move(Units *units, int unit_index, int current_x, int current_y, int destination_x, int destination_y,
-               int board_dimension_x, int board_dimension_y);
+bool unit_can_move(Units *units, int unit_index, int destination_x, int destination_y, int board_dimension_x);
+
+void unit_move(Units *units, int unit_index, DynamicIntArray *move_path,
+               int end_x, int end_y, int board_dimension_x, int board_dimension_y);
+
+void unit_stash_position(int x, int y);
 
 void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_y, int b_x, int b_y,
-               int board_dimension_x);
+               int board_dimension_x, bool strategic_swap);
 
 void unit_claim_territory(Units *units, int unit_index, int x, int y, int board_dimension_x, int board_dimension_y);
 
@@ -97,6 +115,14 @@ void unit_update_health_position(Units *units, int unit_index);
 void unit_update_health_uv(Units *units, int unit_index);
 
 void unit_update_health_color(Units *units, int unit_index);
+
+void unit_occupy_new_tile(Units *units, int unit_index, int previous_x, int previous_y, int new_x, int new_y,
+                          int board_dimension_x);
+
+void unit_add_movement_animation(Units *units, int unit_index, int start_x, int start_y, int end_x, int end_y,
+                                 int move_type);
+
+bool unit_animate_movement(Units *units);
 
 void units_clear(Units *units);
 
