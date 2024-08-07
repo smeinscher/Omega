@@ -31,6 +31,8 @@ typedef struct Board
 
     int selected_tile_index_x;
     int selected_tile_index_y;
+    int last_selected_tile_index_x;
+    int last_selected_tile_index_y;
 
     int board_borders_count;
 
@@ -72,9 +74,13 @@ void board_update_border(Board *board);
 
 void board_process_turn(Board *board);
 
-void board_process_attack(Board *board, int defender_index, int attacker_index);
+void board_process_planet_orbit(Board *board);
+
+BattleResult board_process_attack(Board *board, int defender_index, int attacker_index);
 
 bool board_tile_is_occupied(Board *board, int x, int y);
+
+void board_highlight_possible_unit_placement(Board *board, int station_index, int station_x, int station_y);
 
 void board_clear(Board *board);
 

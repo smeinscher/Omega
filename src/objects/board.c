@@ -4,6 +4,7 @@
 
 #include "board.h"
 
+#include "../players/players.h"
 #include "../util/general_helpers.h"
 #include <math.h>
 #include <memory.h>
@@ -220,6 +221,8 @@ Board *board_create(int dimension_x, int dimension_y, int player_count)
     board->mouse_tile_index_y = -1;
     board->selected_tile_index_x = -1;
     board->selected_tile_index_y = -1;
+    board->last_selected_tile_index_x = -1;
+    board->last_selected_tile_index_y = -1;
     board->board_borders_count = 0;
     board->board_update_flags = 0;
     board->board_current_turn = 0;
@@ -382,13 +385,16 @@ void board_handle_tile_click(Board *board)
             return;
         }
         board->selected_point = board->hovered_point;
+        board->last_selected_tile_index_x = board->selected_tile_index_x;
+        board->last_selected_tile_index_y = board->selected_tile_index_y;
         board->selected_tile_index_x = board->mouse_tile_index_x;
         board->selected_tile_index_y = board->mouse_tile_index_y;
         int unit_index =
             board->units->unit_tile_occupation_status[board->selected_tile_index_y * board->board_dimension_x +
                                                       board->selected_tile_index_x];
         if (unit_index == -1 ||
-            board->units->unit_owner[unit_index] != board->board_current_turn % board->player_count + 1)
+            board->units->unit_owner[unit_index] != board->board_current_turn % board->player_count + 1 ||
+            board->units->unit_type[unit_index] == STATION)
         {
             return;
         }
@@ -423,12 +429,19 @@ void board_handle_tile_click(Board *board)
             }
             else if (can_move)
             {
-                unit_move(board->units, unit_index, board->selected_tile_index_x, board->selected_tile_index_y, move_x,
-                          move_y, board->board_dimension_x, board->board_dimension_y);
-                board->board_update_flags |= BOARD_UPDATE_BORDERS;
+                unit_add_movement_animation(board->units, unit_index, board->selected_tile_index_x,
+                                            board->selected_tile_index_y, move_x, move_y, REGULAR);
+                unit_occupy_new_tile(board->units, unit_index, board->selected_tile_index_x,
+                                     board->selected_tile_index_y, move_x, move_y, board->board_dimension_x);
+                /*
+                                unit_move(board->units, unit_index, board->selected_tile_index_x,
+                   board->selected_tile_index_y, move_x, move_y, board->board_dimension_x, board->board_dimension_y);
+                */
             }
         }
         board->selected_point = -1;
+        board->last_selected_tile_index_x = board->selected_tile_index_x;
+        board->last_selected_tile_index_y = board->selected_tile_index_y;
         board->selected_tile_index_x = -1;
         board->selected_tile_index_y = -1;
         da_int_clear(board->board_moveable_tiles);
@@ -577,31 +590,10 @@ void board_update_fill_vertices(Board *board)
             }
         }
     }
-    if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
-        board->selected_tile_index_y < 0 || board->selected_tile_index_y >= board->board_dimension_y)
-    {
-        return;
-    }
-    int selected_tile_index =
-        (board->selected_tile_index_y * board->board_dimension_x + board->selected_tile_index_x) * 12;
-    board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, selected_tile_index * 2,
-                            coords_to_point(board->selected_tile_index_x, board->selected_tile_index_y,
-                                            board->board_dimension_x, board->board_dimension_y),
-                            board->board_dimension_x, board->board_dimension_y);
     float mod_r = 1.0f;
     float mod_g = 1.0f;
     float mod_b = 1.0f;
     float mod_a = selected_tile_color[3];
-    if (board->mouse_tile_index_x == board->selected_tile_index_x &&
-        board->mouse_tile_index_y == board->selected_tile_index_y)
-    {
-        mod_r = hovered_tile_color[0];
-        mod_g = hovered_tile_color[1];
-        mod_b = hovered_tile_color[2];
-        mod_a = hovered_tile_color[3];
-    }
-    board_add_fill_colors(board->board_fill_colors, selected_tile_index * 4, selected_tile_color[0] * mod_r,
-                          selected_tile_color[1] * mod_g, selected_tile_color[2] * mod_b, mod_a);
     for (int i = 0; i < board->board_moveable_tiles->used; i += 2)
     {
         int x = board->board_moveable_tiles->array[i];
@@ -631,6 +623,27 @@ void board_update_fill_vertices(Board *board)
            highlighted_tile_friendly_color[3]);
         */
     }
+    if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
+        board->selected_tile_index_y < 0 || board->selected_tile_index_y >= board->board_dimension_y)
+    {
+        return;
+    }
+    int selected_tile_index =
+        (board->selected_tile_index_y * board->board_dimension_x + board->selected_tile_index_x) * 12;
+    board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, selected_tile_index * 2,
+                            coords_to_point(board->selected_tile_index_x, board->selected_tile_index_y,
+                                            board->board_dimension_x, board->board_dimension_y),
+                            board->board_dimension_x, board->board_dimension_y);
+    if (board->mouse_tile_index_x == board->selected_tile_index_x &&
+        board->mouse_tile_index_y == board->selected_tile_index_y)
+    {
+        mod_r = hovered_tile_color[0];
+        mod_g = hovered_tile_color[1];
+        mod_b = hovered_tile_color[2];
+        mod_a = hovered_tile_color[3];
+    }
+    board_add_fill_colors(board->board_fill_colors, selected_tile_index * 4, selected_tile_color[0] * mod_r,
+                          selected_tile_color[1] * mod_g, selected_tile_color[2] * mod_b, mod_a);
     for (int i = 0; i < board->board_attackable_tiles->used; i += 2)
     {
         int x = board->board_attackable_tiles->array[i];
@@ -732,7 +745,6 @@ void board_update_border(Board *board)
         }
     }
     board->board_borders_count = index / 12;
-    board->board_update_flags |= BOARD_UPDATE_BORDERS;
 }
 
 void board_process_turn(Board *board)
@@ -743,7 +755,13 @@ void board_process_turn(Board *board)
     board->selected_tile_index_x = -1;
     board->selected_tile_index_y = -1;
     board->selected_point = -1;
-    if (board->board_current_turn % board->player_count == board->player_count - 1)
+
+    board->board_current_turn++;
+}
+
+void board_process_planet_orbit(Board *board)
+{
+    if (board->board_current_turn % board->player_count == 0)
     {
         DynamicIntArray moved_units;
         da_int_init(&moved_units, 2);
@@ -777,68 +795,87 @@ void board_process_turn(Board *board)
                 int new_y = board->planets->planet_tile_indices[1] + relative_y;
                 int next_tile_unit_index =
                     board->units->unit_tile_occupation_status[new_y * board->board_dimension_x + new_x];
-                unit_swap(board->units, unit_index, next_tile_unit_index, x, y, new_x, new_y, board->board_dimension_x);
-                board->board_update_flags |= BOARD_UPDATE_BORDERS;
+                unit_swap(board->units, unit_index, next_tile_unit_index, x, y, new_x, new_y, board->board_dimension_x,
+                          false);
                 da_int_push_back(&moved_units, unit_index);
             }
         }
         planet_orbit(board->planets);
+        da_int_free(&moved_units);
     }
-
-    board->board_current_turn++;
 }
 
-void board_process_attack(Board *board, int defender_index, int attacker_index)
+BattleResult board_process_attack(Board *board, int defender_index, int attacker_index)
 {
+    int start_x = board->units->unit_indices[attacker_index * 2];
+    int start_y = board->units->unit_indices[attacker_index * 2 + 1];
     int move_x = board->units->unit_indices[defender_index * 2];
     int move_y = board->units->unit_indices[defender_index * 2 + 1];
     switch (unit_attack(board->units, defender_index, attacker_index))
     {
     case NO_UNITS_DESTROYED: {
-        DynamicIntArray *da = hex_grid_find_path(board, board->units->unit_indices[attacker_index * 2],
-                                                 board->units->unit_indices[attacker_index * 2 + 1], move_x, move_y,
-                                                 board->board_dimension_x, board->board_dimension_y);
+        DynamicIntArray *da = hex_grid_find_path(board, start_x, start_y, move_x, move_y, board->board_dimension_x,
+                                                 board->board_dimension_y);
         if (da == NULL)
         {
             printf("ruh row\n");
-            return;
+            break;
         }
+        unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, ATTACK);
         if (da->used >= 2)
         {
-            move_x = da->array[0];
-            move_y = da->array[1];
+            unit_add_movement_animation(board->units, attacker_index, move_x, move_y, da->array[0], da->array[1],
+                                        RETREAT);
+            unit_occupy_new_tile(board->units, attacker_index, start_x, start_y, da->array[0], da->array[1],
+                                 board->board_dimension_x);
         }
         else
         {
-            /*
-            move_x = board->units->unit_indices[attacker_index * 2];
-            move_y = board->units->unit_indices[attacker_index * 2 + 1];
-        */
-            return;
+            unit_add_movement_animation(board->units, attacker_index, move_x, move_y, start_x, start_y, RETREAT);
         }
         da_int_free(da);
         free(da);
-        break;
+        return NO_UNITS_DESTROYED;
     }
     case DEFENDER_DESTROYED: {
-        unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
-        break;
+        if (board->units->unit_type[defender_index] != STATION)
+        {
+            unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
+            unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, REGULAR);
+            unit_occupy_new_tile(board->units, attacker_index, start_x, start_y, move_x, move_y,
+                                 board->board_dimension_x);
+        }
+        else
+        {
+            board->units->unit_owner[defender_index] = board->units->unit_owner[attacker_index];
+            unit_update_color(board->units, defender_index);
+            unit_claim_territory(board->units, defender_index, move_x, move_y, board->board_dimension_x,
+                                 board->board_dimension_y);
+            board->board_update_flags |= BOARD_UPDATE_BORDERS;
+        }
+        return DEFENDER_DESTROYED;
     }
     case ATTACKER_DESTROYED: {
         unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
                     board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
-        return;
+        return ATTACKER_DESTROYED;
     }
     case BOTH_DESTROYED: {
         unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
         unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
                     board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
-        return;
+        return BOTH_DESTROYED;
     }
     }
-    unit_move(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
-              board->units->unit_indices[attacker_index * 2 + 1], move_x, move_y, board->board_dimension_x,
-              board->board_dimension_y);
+    /*
+        unit_add_movement_animation(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
+                                    board->units->unit_indices[attacker_index * 2 + 1], move_x, move_y);
+    */
+    /*
+        unit_move(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
+                  board->units->unit_indices[attacker_index * 2 + 1], move_x, move_y, board->board_dimension_x,
+                  board->board_dimension_y);
+    */
 }
 
 bool board_tile_is_occupied(Board *board, int x, int y)
@@ -846,6 +883,14 @@ bool board_tile_is_occupied(Board *board, int x, int y)
     return (board->units->unit_tile_occupation_status[y * board->board_dimension_x + x] != -1 || x < 0 ||
             x >= board->board_dimension_x || y < 0 || y >= board->board_dimension_y ||
             (x == board->planets->planet_tile_indices[0] && y == board->planets->planet_tile_indices[1]));
+}
+
+void board_highlight_possible_unit_placement(Board *board, int station_index, int station_x, int station_y)
+{
+    da_int_free(board->board_moveable_tiles);
+    free(board->board_moveable_tiles);
+    board->board_moveable_tiles = hex_grid_possible_moves(board, station_index, station_x, station_y);
+    board->board_update_flags |= BOARD_UPDATE_FILL;
 }
 
 void board_clear(Board *board)

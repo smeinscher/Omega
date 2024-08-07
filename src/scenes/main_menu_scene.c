@@ -31,7 +31,9 @@ void main_menu_scene_render()
 {
     struct nk_context *ctx = omega_nuklear_get_nuklear_context();
     omega_nuklear_start();
-    if (nk_begin(ctx, "Demo", nk_rect(540, 330, 210, 70), NK_WINDOW_NO_SCROLLBAR))
+    float x = (float)platform_get_window_width() / 2.0f - 105.0f;
+    float y = (float)platform_get_window_height() / 2.0f - 35.0f;
+    if (nk_begin(ctx, "Demo", nk_rect(x, y, 210.0f, 70.0f), NK_WINDOW_NO_SCROLLBAR))
     {
         nk_layout_row_static(ctx, 60, 200, 1);
         if (nk_button_label(ctx, "New Game"))

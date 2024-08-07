@@ -30,4 +30,8 @@ double platform_get_time();
 
 void platform_set_vsync(int interval);
 
+int platform_get_window_width();
+
+int platform_get_window_height();
+
 #endif // OMEGAAPP_PLATFORM_H

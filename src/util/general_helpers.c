@@ -396,11 +396,13 @@ DynamicIntArray *hex_grid_possible_moves(Board *board, int unit_index, int unit_
     int start_q, start_r;
     hex_grid_offset_to_axial(unit_x, unit_y, &start_q, &start_r);
 
+    float initial_movement_points =
+        board->units->unit_type[unit_index] != STATION ? board->units->unit_movement_points[unit_index] : 2.0f;
     Node *neighbors[6];
     for (int i = 0; i < 6; i++)
     {
         neighbors[i] = hex_grid_tile_fill_neighbors(board, start_q + g_directions[i][0], start_r + g_directions[i][1],
-                                                    board->units->unit_movement_points[unit_index] - 1.0f);
+                                                    initial_movement_points - 1.0f);
     }
 
     for (int i = 0; i < 6; i++)

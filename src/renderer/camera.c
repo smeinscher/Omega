@@ -5,8 +5,8 @@
 #include "camera.h"
 #include <cglm/cglm.h>
 
-static int g_viewport_width = 1280;
-static int g_viewport_height = 720;
+static int g_viewport_width = 1920;
+static int g_viewport_height = 1080;
 
 static vec3 g_camera_position = {0.0f, 0.0f, 2.0f};
 static vec2 g_max_camera_position = {INFINITY, INFINITY};
@@ -169,4 +169,14 @@ int camera_get_viewport_width()
 int camera_get_viewport_height()
 {
     return g_viewport_height;
+}
+
+void camera_set_viewport_width(int viewport_width)
+{
+    g_viewport_width = viewport_width;
+}
+
+void camera_set_viewport_height(int viewport_height)
+{
+    g_viewport_height = viewport_height;
 }
