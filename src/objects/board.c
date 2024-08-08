@@ -377,8 +377,7 @@ void board_handle_tile_placement(Board *board, UnitType unit_type, int player_co
         if (in_board_moveable_tiles(board, board->mouse_tile_index_x, board->mouse_tile_index_y))
         {
             int player_index = board->board_current_turn % player_count;
-            unit_purchase_with_score(board->units, player_index, score, unit_type,
-                                     board->mouse_tile_index_x,
+            unit_purchase_with_score(board->units, player_index, score, unit_type, board->mouse_tile_index_x,
                                      board->mouse_tile_index_y, board->board_dimension_x, board->board_dimension_y);
         }
         da_int_free(board->board_moveable_tiles);
@@ -610,10 +609,7 @@ void board_update_fill_vertices(Board *board)
             }
         }
     }
-    float mod_r = 1.0f;
-    float mod_g = 1.0f;
-    float mod_b = 1.0f;
-    float mod_a = selected_tile_color[3];
+    float mod_r, mod_g, mod_b, mod_a;
     if (board->board_moveable_tiles != NULL)
     {
         for (int i = 0; i < board->board_moveable_tiles->used; i += 2)
@@ -637,15 +633,8 @@ void board_update_fill_vertices(Board *board)
                 mod_a = hovered_tile_color[3];
             }
             board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4,
-                                  highlighted_tile_color[0] * mod_r,
-                                  highlighted_tile_color[1] * mod_g, highlighted_tile_color[2] * mod_b, mod_a);
-            /*
-                        board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4,
-                                              highlighted_tile_friendly_color[0] * mod_r,
-                                              highlighted_tile_friendly_color[1] * mod_g,
-                                              highlighted_tile_friendly_color[2] * mod_b,
-               highlighted_tile_friendly_color[3]);
-            */
+                                  highlighted_tile_color[0] * mod_r, highlighted_tile_color[1] * mod_g,
+                                  highlighted_tile_color[2] * mod_b, mod_a);
         }
     }
     if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
@@ -653,6 +642,10 @@ void board_update_fill_vertices(Board *board)
     {
         return;
     }
+    mod_r = 1.0f;
+    mod_g = 1.0f;
+    mod_b = 1.0f;
+    mod_a = selected_tile_color[3];
     int selected_tile_index =
         (board->selected_tile_index_y * board->board_dimension_x + board->selected_tile_index_x) * 12;
     board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, selected_tile_index * 2,

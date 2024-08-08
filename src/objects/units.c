@@ -296,7 +296,7 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     // TODO: also, find better random
     float attacker_base_damage = unit_base_damage[units->unit_type[attacker_index]];
     units->unit_health[defender_index] -= ((float)(rand() % ((int)attacker_base_damage * 100)) + attacker_base_damage) /
-        unit_base_damage[units->unit_type[attacker_index]];
+                                          unit_base_damage[units->unit_type[attacker_index]];
     if (units->unit_type[defender_index] != WORKER && units->unit_type[defender_index] != STATION)
     {
         float defender_base_damage = unit_base_damage[units->unit_type[defender_index]];
@@ -358,16 +358,16 @@ bool unit_purchase(int player_index, Resources *resources, Units *units, UnitTyp
 bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
                               int board_dimension_x, int board_dimension_y)
 {
-    if (unit_type == DROID && *score >= 150)
+    if (unit_type == DROID && *score >= 50)
+    {
+        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
+        *score -= 50;
+        return true;
+    }
+    if (unit_type == BATTLESHIP && *score >= 150)
     {
         unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
         *score -= 150;
-        return true;
-    }
-    if (unit_type == BATTLESHIP && *score >= 410)
-    {
-        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
-        *score -= 410;
         return true;
     }
     return false;
@@ -379,22 +379,23 @@ bool unit_can_move(Units *units, int unit_index, int destination_x, int destinat
            units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] == unit_index;
 }
 
-void unit_move(Units *units, int unit_index, DynamicIntArray *move_path,
-               int end_x, int end_y, int board_dimension_x, int board_dimension_y)
+void unit_move(Units *units, int unit_index, DynamicIntArray *move_path, int end_x, int end_y, int board_dimension_x,
+               int board_dimension_y)
 {
     //    units->unit_tile_occupation_status[current_y * board_dimension_x + current_x] = -1;
     //    units->unit_tile_occupation_status[destination_y * board_dimension_x + destination_x] = unit_index;
     //    units->unit_indices[unit_index * 2] = destination_x;
     //    units->unit_indices[unit_index * 2 + 1] = destination_y;
-    for (int i = 0; i < move_path->used; i += 2)
+    if (move_path != NULL)
     {
-        int x = move_path->array[i];
-        int y = move_path->array[i + 1];
-        unit_claim_territory(units, unit_index, x, y, board_dimension_x,
-                             board_dimension_y);
+        for (int i = 0; i < move_path->used; i += 2)
+        {
+            int x = move_path->array[i];
+            int y = move_path->array[i + 1];
+            unit_claim_territory(units, unit_index, x, y, board_dimension_x, board_dimension_y);
+        }
     }
-    unit_claim_territory(units, unit_index, end_x, end_y, board_dimension_x,
-                         board_dimension_y);
+    unit_claim_territory(units, unit_index, end_x, end_y, board_dimension_x, board_dimension_y);
     //    printf("Unit %d of Player %d moved from %d, %d to %d, %d\n", unit_index, units->unit_owner[unit_index],
     //    current_x,
     //           current_y, destination_x, destination_y);
@@ -445,6 +446,11 @@ void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_
 
 void unit_claim_territory(Units *units, int unit_index, int x, int y, int board_dimension_x, int board_dimension_y)
 {
+    if (units->unit_owner[unit_index] <= 0)
+    {
+        printf("whaa\n");
+        return;
+    }
     units->unit_tile_ownership_status[y * board_dimension_x + x] = units->unit_owner[unit_index];
     // Tiles around unit will be taken over, unless occupied
     if (y > 0 && units->unit_tile_occupation_status[(y - 1) * board_dimension_x + x] == -1)
@@ -680,7 +686,7 @@ bool unit_animate_movement(Units *units)
 
     units->unit_update_flags |= UNIT_UPDATE;
 
-    if (units->unit_animation_progress >= 1.0f)
+    if (true || units->unit_animation_progress >= 1.0f)
     {
         da_int_remove(&units->moves_unit_index, 0);
         da_int_remove(&units->moves_list, 0);

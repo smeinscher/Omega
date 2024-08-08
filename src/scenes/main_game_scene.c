@@ -144,7 +144,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index != -1)
             {
@@ -168,7 +168,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index == -1)
             {
@@ -193,7 +193,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index != -1)
             {
@@ -213,14 +213,14 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
             if (g_current_board->selected_tile_index_x >= 0 && g_current_board->selected_tile_index_y >= 0)
             {
                 g_current_board->units->unit_tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                                   g_current_board->board_dimension_x +
+                                                                       g_current_board->board_dimension_x +
                                                                    g_current_board->selected_tile_index_x]++;
                 if (g_current_board->units->unit_tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                                       g_current_board->board_dimension_x +
+                                                                           g_current_board->board_dimension_x +
                                                                        g_current_board->selected_tile_index_x] > 4)
                 {
                     g_current_board->units->unit_tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                                       g_current_board->board_dimension_x +
+                                                                           g_current_board->board_dimension_x +
                                                                        g_current_board->selected_tile_index_x] = 0;
                 }
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
@@ -280,7 +280,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index == -1)
             {
@@ -301,7 +301,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index == -1)
             {
@@ -362,9 +362,9 @@ void main_game_scene_glfw_mouse_button_callback(GLFWwindow *window, int button, 
                 (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
             vec3 position = {
                 ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - (float)camera_get_viewport_width()) -
-                ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
+                    ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
                 (float)camera_get_viewport_height() / camera_get_zoom_ratio() - (float)camera_get_viewport_height() -
-                ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
+                    ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
                 2.0f};
             camera_set_position(position);
 
@@ -746,8 +746,11 @@ void main_game_scene_reset_board()
     board_update_border(g_current_board);
     g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
     players_reset(&g_players);
-    g_pause = g_players->player_count == 0;
-    // player_start_turn(g_current_board, g_players, g_current_board->board_current_turn % 4);
+    g_pause = g_players->human_players_count == 0;
+    if (g_players->human_players_count == 0)
+    {
+        player_start_turn(g_current_board, g_players, 0);
+    }
 }
 
 void main_game_scene_init()
@@ -755,8 +758,8 @@ void main_game_scene_init()
     platform_set_callbacks(main_game_scene_glfw_framebuffer_size_callback, main_game_scene_glfw_key_callback,
                            main_game_scene_glfw_cursor_position_callback, main_game_scene_glfw_mouse_button_callback,
                            main_game_scene_glfw_scroll_callback);
-    g_players = players_create(MAX_PLAYERS, 1, NULL);
-    g_pause = g_players->player_count == 0;
+    g_players = players_create(MAX_PLAYERS, 0, NULL);
+    g_pause = g_players->human_players_count == 0;
     Board *board = board_create(13, 13, MAX_PLAYERS);
     g_board_outline_program =
         opengl_load_basic_shaders("../resources/shaders/board_outline.vert", "../resources/shaders/board_outline.frag");
@@ -814,9 +817,9 @@ void main_game_scene_init()
     float top = (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
     vec3 position = {
         ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - (float)camera_get_viewport_width()) -
-        ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
+            ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
         (float)camera_get_viewport_height() / camera_get_zoom_ratio() - (float)camera_get_viewport_height() -
-        ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
+            ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
         2.0f};
     camera_set_position(position);
     /*vec2 max_position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
@@ -837,6 +840,10 @@ void main_game_scene_init()
                 unit_replenish_movement(board->units, i);
             }
         }
+    }
+    else if (!g_pause)
+    {
+        player_start_turn(g_current_board, g_players, 0);
     }
 }
 
@@ -863,11 +870,15 @@ void main_game_scene_update()
         {
             if (move_type == REGULAR)
             {
-                DynamicIntArray *move_path = hex_grid_find_path(g_current_board, start_x, start_y, end_x, end_y,
-                                                                g_current_board->board_dimension_x,
-                                                                g_current_board->board_dimension_y);
-                unit_move(g_current_board->units, unit_index, move_path,
-                          end_x, end_y, g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                DynamicIntArray *move_path =
+                    hex_grid_find_path(g_current_board, start_x, start_y, end_x, end_y,
+                                       g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                if (move_path == NULL)
+                {
+                    printf("oof\n");
+                }
+                unit_move(g_current_board->units, unit_index, move_path, end_x, end_y,
+                          g_current_board->board_dimension_x, g_current_board->board_dimension_y);
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
                 da_int_free(move_path);
                 free(move_path);
@@ -879,11 +890,11 @@ void main_game_scene_update()
             }
             else if (move_type == RETREAT)
             {
-                DynamicIntArray *move_path = hex_grid_find_path(g_current_board, g_stash_x, g_stash_y, end_x, end_y,
-                                                                g_current_board->board_dimension_x,
-                                                                g_current_board->board_dimension_y);
-                unit_move(g_current_board->units, unit_index, move_path, end_x,
-                          end_y, g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                DynamicIntArray *move_path =
+                    hex_grid_find_path(g_current_board, g_stash_x, g_stash_y, end_x, end_y,
+                                       g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                unit_move(g_current_board->units, unit_index, move_path, end_x, end_y,
+                          g_current_board->board_dimension_x, g_current_board->board_dimension_y);
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
                 da_int_free(move_path);
                 free(move_path);
@@ -1077,18 +1088,19 @@ void main_game_scene_render()
             {
                 selected_unit =
                     g_current_board->units->unit_tile_occupation_status[g_current_board->selected_tile_index_y *
-                                                                        g_current_board->board_dimension_x +
+                                                                            g_current_board->board_dimension_x +
                                                                         g_current_board->selected_tile_index_x];
             }
             else
             {
                 selected_unit =
                     g_current_board->units->unit_tile_occupation_status[g_current_board->last_selected_tile_index_y *
-                                                                        g_current_board->board_dimension_x +
+                                                                            g_current_board->board_dimension_x +
                                                                         g_current_board->last_selected_tile_index_x];
             }
-            if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION && g_current_board->
-                units->unit_owner[selected_unit] == g_current_board->board_current_turn % g_players->player_count + 1 &&
+            if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION &&
+                g_current_board->units->unit_owner[selected_unit] ==
+                    g_current_board->board_current_turn % g_players->player_count + 1 &&
                 nk_button_label(ctx, "Create Droid"))
             {
                 board_highlight_possible_unit_placement(g_current_board, selected_unit,
@@ -1096,8 +1108,9 @@ void main_game_scene_render()
                                                         g_current_board->last_selected_tile_index_y);
                 g_place_unit_type = DROID;
             }
-            if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION && g_current_board->
-                units->unit_owner[selected_unit] == g_current_board->board_current_turn % g_players->player_count + 1 &&
+            if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION &&
+                g_current_board->units->unit_owner[selected_unit] ==
+                    g_current_board->board_current_turn % g_players->player_count + 1 &&
                 nk_button_label(ctx, "Create Battleship"))
             {
                 board_highlight_possible_unit_placement(g_current_board, selected_unit,
@@ -1133,9 +1146,8 @@ void main_game_scene_render()
         nk_layout_row_static(ctx, 8, 250, 1);
         char buffer[30];
         sprintf(buffer, "Turn %d",
-                g_current_board->player_count != 0
-                    ? g_current_board->board_current_turn / g_current_board->player_count
-                    : 0);
+                g_current_board->player_count != 0 ? g_current_board->board_current_turn / g_current_board->player_count
+                                                   : 0);
         nk_label(ctx, buffer, NK_TEXT_LEFT);
         for (int i = 0; i < g_players->player_count; i++)
         {
