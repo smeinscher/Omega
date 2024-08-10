@@ -5,6 +5,7 @@
 #ifndef OMEGAAPP_PLANETS_H
 #define OMEGAAPP_PLANETS_H
 
+#include <stdbool.h>
 #define PLANET_UPDATE 0x1
 
 #define PLANET_TOTAL_TYPES 16
@@ -56,6 +57,10 @@ void planet_update_position(Planets *planets, int planet_index);
 void planet_update_uv(Planets *planets, int planet_index);
 
 void planet_update_color(Planets *planets, int planet_index);
+
+int planet_find_closest(Planets *planets, int x, int y);
+
+bool planet_on_tile(Planets *planets, int x, int y);
 
 void planets_clear(Planets *planets);
 

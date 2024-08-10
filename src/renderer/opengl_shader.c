@@ -73,7 +73,7 @@ unsigned int opengl_compile_shader(const char *path, unsigned int type)
     if (fp == NULL)
     {
         // TODO: logging stuff
-        printf("Failed to open file");
+        printf("Failed to open file\n");
         return 0;
     }
 
@@ -122,6 +122,12 @@ unsigned int opengl_compile_shader(const char *path, unsigned int type)
         return 0;
     }
     return shader;
+}
+
+void opengl_set_uniform_float(unsigned int program, const char *name, float f)
+{
+    glUseProgram(program);
+    glUniform1f(glGetUniformLocation(program, name), f);
 }
 
 void opengl_set_uniform_mat4(unsigned int program, const char *name, mat4 mat)

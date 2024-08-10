@@ -53,7 +53,13 @@ add_library(OmegaApp SHARED
         src/players/players.c
         src/players/players.h
         src/players/resources.c
-        src/players/resources.h)
+        src/players/resources.h
+        src/objects/star_background.c
+        src/objects/star_background.h
+        src/objects/planets_shader.c
+        src/objects/planets_shader.h
+        src/players/ai_actions.c
+        src/players/ai_actions.h)
 
 target_link_libraries(OmegaApp
         PRIVATE

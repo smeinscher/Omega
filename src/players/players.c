@@ -4,6 +4,7 @@
 
 #include "players.h"
 #include "../util/general_helpers.h"
+#include "ai_actions.h"
 #include <malloc.h>
 #include <memory.h>
 #include <stdlib.h>
@@ -69,8 +70,7 @@ Players *players_create(int player_count, int human_players_count, int *human_pl
     }
     for (int i = 0; i < player_count; i++)
     {
-        int rand_unit = rand() % 2 + 1;
-        players->desired_unit_purchase[i] = rand_unit;
+        players->desired_unit_purchase[i] = 0;
     }
 
     players->player_unit_count = malloc(sizeof(int) * player_count);
@@ -149,121 +149,56 @@ void player_start_turn(Board *board, Players *players, int player_index)
         if (board->units->unit_owner[i] == player_index + 1)
         {
             unit_replenish_movement(board->units, i);
-            unit_replenish_health(board->units, i);
+            unit_replenish_health(board->units, i, 25.0f);
+            if (board->units->unit_type[i] == WORKER)
+            {
+                int q = 0;
+                int r = -1;
+                for (int j = 0; j < 6; j++)
+                {
+                    int x, y;
+                    hex_grid_axial_to_offset(q, r, &x, &y);
+                    x += board->board_dimension_x / 2;
+                    y += board->board_dimension_y / 2;
+                    int unit_index = board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
+                    if (board->units->unit_owner[unit_index] == player_index + 1)
+                    {
+                        unit_replenish_health(board->units, unit_index, 50.0f);
+                    }
+                    hex_grid_rotation_get_next(false, 1, &q, &r);
+                }
+            }
         }
     }
 
     if (!is_human_player(players, player_index))
     {
+        DynamicIntArray stations;
+        da_int_init(&stations, 1);
         for (int i = 0; i < board->units->unit_buffer_size; i++)
         {
-            if (board->units->unit_owner[i] == player_index + 1)
+            if (board->units->unit_owner[i] == player_index + 1 && board->units->unit_type[i] == STATION)
             {
-                if (board->units->unit_type[i] == STATION)
-                {
-                    DynamicIntArray *possible_moves = hex_grid_possible_moves(
-                        board, i, board->units->unit_indices[i * 2], board->units->unit_indices[i * 2 + 1]);
-                    if (possible_moves->used < 2)
-                    {
-                        continue;
-                    }
-                    int r = rand() % possible_moves->used / 2;
-                    while (unit_purchase_with_score(board->units, player_index, &players->player_score[player_index],
-                                                    players->desired_unit_purchase[player_index],
-                                                    possible_moves->array[r * 2], possible_moves->array[r * 2 + 1],
-                                                    board->board_dimension_x, board->board_dimension_y))
-                    {
-                        int rand_unit = rand() % 2000;
-                        switch (player_index)
-                        {
-                        case 0:
-                            rand_unit = 2;
-                            break;
-                        case 1:
-                            rand_unit = 1;
-                            break;
-                        case 2:
-                            rand_unit = rand_unit > 250 ? 2 : 1;
-                            break;
-                        case 3:
-                            rand_unit = rand_unit > 250 ? 1 : 2;
-                            break;
-                        default:
-                            rand_unit = 1;
-                            break;
-                        }
-                        players->desired_unit_purchase[player_index] = rand_unit;
-                        da_int_free(possible_moves);
-                        free(possible_moves);
-                        possible_moves = hex_grid_possible_moves(board, i, board->units->unit_indices[i * 2],
-                                                                 board->units->unit_indices[i * 2 + 1]);
-                        if (possible_moves->used < 2)
-                        {
-                            break;
-                        }
-                        r = rand() % possible_moves->used / 2;
-                    }
-                    da_int_free(possible_moves);
-                    free(possible_moves);
-                    continue;
-                }
-                if (board->units->unit_type[i] != WORKER)
-                {
-                    DynamicIntArray *possible_attacks = hex_grid_possible_attacks(
-                        board, i, board->units->unit_indices[i * 2], board->units->unit_indices[i * 2 + 1]);
-                    if (possible_attacks->used > 0)
-                    {
-                        int r = rand() % possible_attacks->used / 2;
-                        int defending_unit_index =
-                            board->units->unit_tile_occupation_status[possible_attacks->array[r * 2 + 1] *
-                                                                          board->board_dimension_x +
-                                                                      possible_attacks->array[r * 2]];
-                        if (defending_unit_index != -1)
-                        {
-                            int defending_unit_owner = board->units->unit_owner[defending_unit_index] - 1;
-                            BattleResult result = board_process_attack(board, defending_unit_index, i);
-                            switch (result)
-                            {
-                            case NO_UNITS_DESTROYED:
-                                break;
-                            case DEFENDER_DESTROYED:
-                                players->player_score[player_index] += 25;
-                                break;
-                            case ATTACKER_DESTROYED:
-                                players->player_score[defending_unit_owner] += 15;
-                                break;
-                            case BOTH_DESTROYED:
-                                players->player_score[player_index] += 10;
-                                players->player_score[defending_unit_owner] += 10;
-                                break;
-                            }
-                            continue;
-                        }
-                        printf("Error, defending_unit_index is -1\n");
-                    }
-                }
-                DynamicIntArray *possible_moves = hex_grid_possible_moves(board, i, board->units->unit_indices[i * 2],
-                                                                          board->units->unit_indices[i * 2 + 1]);
-                if (possible_moves->used != 0)
-                {
-                    int r = rand() % possible_moves->used / 2;
-                    unit_add_movement_animation(board->units, i, board->units->unit_indices[i * 2],
-                                                board->units->unit_indices[i * 2 + 1], possible_moves->array[r * 2],
-                                                possible_moves->array[r * 2 + 1], 0);
-                    unit_occupy_new_tile(board->units, i, board->units->unit_indices[i * 2],
-                                         board->units->unit_indices[i * 2 + 1], possible_moves->array[r * 2],
-                                         possible_moves->array[r * 2 + 1], board->board_dimension_x);
-                    /*
-                                        unit_move(board->units, i, board->units->unit_indices[i * 2],
-                       board->units->unit_indices[i * 2 + 1], possible_moves->array[r * 2], possible_moves->array[r * 2
-                       + 1], board->board_dimension_x, board->board_dimension_y);
-                    */
-                }
-                da_int_free(possible_moves);
-                free(possible_moves);
+                da_int_push_back(&stations, i);
             }
         }
+        ai_spawn_unit(board, players, player_index, &stations);
 
+        for (int i = 0; i < board->units->unit_buffer_size; i++)
+        {
+            if (board->units->unit_owner[i] != player_index + 1 || board->units->unit_type[i] == STATION)
+            {
+                continue;
+            }
+            if (board->units->unit_type[i] != WORKER)
+            {
+                if (ai_unit_attack(board, players, player_index, i))
+                {
+                    continue;
+                }
+            }
+            ai_unit_move(board, players, player_index, i);
+        }
         player_end_turn(board, players, player_index);
     }
 }
@@ -272,15 +207,25 @@ void player_end_turn(Board *board, Players *players, int player_index)
 {
     players->player_flags |= PLAYER_ENDED_TURN;
     players->player_unit_count[player_index] = 0;
+    if (!is_human_player(players, player_index))
+    {
+        players->player_score[player_index] += 500;
+    }
     for (int i = 0; i < board->board_dimension_x * board->board_dimension_y; i++)
     {
         if (board->units->unit_tile_ownership_status[i] == player_index + 1)
         {
-            if (board->units->unit_tile_occupation_status[i] != -1)
+            int unit_index = board->units->unit_tile_occupation_status[i];
+            if (unit_index != -1)
             {
                 players->player_unit_count[player_index]++;
             }
-            players->player_score[player_index]++;
+            if (board->units->unit_type[unit_index] == STATION &&
+                planet_on_tile(board->planets, i % board->board_dimension_x, i / board->board_dimension_x))
+            {
+                players->player_score[player_index] += 500;
+            }
+            players->player_score[player_index] += 10;
         }
     }
     board_process_turn(board);

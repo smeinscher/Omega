@@ -77,27 +77,27 @@ Planets *planets_create(int board_dimension_x, int board_dimension_y)
         return NULL;
     }
 
-    planet_add(planets, 0.6f, SUN, 0, board_dimension_x / 2, board_dimension_y / 2);
-    planet_add(planets, 0.1f, MERCURY, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
-    planet_add(planets, 0.15f, VENUS, 2, board_dimension_x / 2 + 2, board_dimension_y / 2 - 2);
-    planet_add(planets, 0.15f, EARTH, 3, board_dimension_x / 2, board_dimension_y / 2 + 3);
-    planet_add(planets, 0.13f, MARS, 4, board_dimension_x / 2 + 4, board_dimension_y / 2);
+    planet_add(planets, 0.8f, SUN, 0, board_dimension_x / 2, board_dimension_y / 2);
+    planet_add(planets, 0.2f, MERCURY, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
+    planet_add(planets, 0.3f, VENUS, 2, board_dimension_x / 2 + 2, board_dimension_y / 2 - 2);
+    planet_add(planets, 0.3f, EARTH, 3, board_dimension_x / 2, board_dimension_y / 2 + 3);
+    planet_add(planets, 0.26f, MARS, 4, board_dimension_x / 2 + 4, board_dimension_y / 2);
     // planet_add(planets, 0.25f, NEPTUNE, 8, board_dimension_x / 2 - 8, board_dimension_y / 2);
-    int asteroids_distance_from_sun = 5;
-    int q = 0;
-    int r = -asteroids_distance_from_sun;
-    for (int i = 0; i < asteroids_distance_from_sun * 6; i++)
-    {
-        int x, y;
-        hex_grid_axial_to_offset(q, r, &x, &y);
-        x += board_dimension_x / 2;
-        y += board_dimension_y / 2;
-        if (i % 3 == 0)
-        {
-            planet_add(planets, 1.0f, ASTEROIDS, asteroids_distance_from_sun, x, y);
-        }
-        hex_grid_rotation_get_next(false, asteroids_distance_from_sun, &q, &r);
-    }
+    //    int asteroids_distance_from_sun = 5;
+    //    int q = 0;
+    //    int r = -asteroids_distance_from_sun;
+    //    for (int i = 0; i < asteroids_distance_from_sun * 6; i++)
+    //    {
+    //        int x, y;
+    //        hex_grid_axial_to_offset(q, r, &x, &y);
+    //        x += board_dimension_x / 2;
+    //        y += board_dimension_y / 2;
+    //        if (i % 3 == 0)
+    //        {
+    //            planet_add(planets, 1.0f, ASTEROIDS, asteroids_distance_from_sun, x, y);
+    //        }
+    //        hex_grid_rotation_get_next(false, asteroids_distance_from_sun, &q, &r);
+    //    }
 
     return planets;
 }
@@ -189,36 +189,109 @@ void planet_update_position(Planets *planets, int planet_index)
 void planet_update_uv(Planets *planets, int planet_index)
 {
     // TODO: replace hardcoded values with variables
-    float uv_start_x = planets->planet_type[planet_index] == ASTEROIDS ? 0.0f : 5.0f / 6.0f;
-    float uv_end_x = planets->planet_type[planet_index] == ASTEROIDS ? 1.0f / 6.0f : 1.0f;
-    planets->planet_uvs[planet_index * 12] = uv_start_x;
-    planets->planet_uvs[planet_index * 12 + 1] =
-        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
-    planets->planet_uvs[planet_index * 12 + 2] = uv_end_x;
-    planets->planet_uvs[planet_index * 12 + 3] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
-    planets->planet_uvs[planet_index * 12 + 4] = uv_start_x;
-    planets->planet_uvs[planet_index * 12 + 5] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
-    planets->planet_uvs[planet_index * 12 + 6] = uv_start_x;
-    planets->planet_uvs[planet_index * 12 + 7] =
-        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
-    planets->planet_uvs[planet_index * 12 + 8] = uv_end_x;
-    planets->planet_uvs[planet_index * 12 + 9] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
-    planets->planet_uvs[planet_index * 12 + 10] = uv_end_x;
-    planets->planet_uvs[planet_index * 12 + 11] =
-        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
-    planets->planet_update_flags |= PLANET_UPDATE;
+    //    float uv_start_x = planets->planet_type[planet_index] == ASTEROIDS ? 0.0f : 5.0f / 6.0f;
+    //    float uv_end_x = planets->planet_type[planet_index] == ASTEROIDS ? 1.0f / 6.0f : 1.0f;
+    //    planets->planet_uvs[planet_index * 12] = uv_start_x;
+    //    planets->planet_uvs[planet_index * 12 + 1] =
+    //        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
+    //    planets->planet_uvs[planet_index * 12 + 2] = uv_end_x;
+    //    planets->planet_uvs[planet_index * 12 + 3] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
+    //    planets->planet_uvs[planet_index * 12 + 4] = uv_start_x;
+    //    planets->planet_uvs[planet_index * 12 + 5] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
+    //    planets->planet_uvs[planet_index * 12 + 6] = uv_start_x;
+    //    planets->planet_uvs[planet_index * 12 + 7] =
+    //        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
+    //    planets->planet_uvs[planet_index * 12 + 8] = uv_end_x;
+    //    planets->planet_uvs[planet_index * 12 + 9] = (float)planets->planet_type[planet_index] / PLANET_TOTAL_TYPES;
+    //    planets->planet_uvs[planet_index * 12 + 10] = uv_end_x;
+    //    planets->planet_uvs[planet_index * 12 + 11] =
+    //        ((float)planets->planet_type[planet_index] + 1.0f) / PLANET_TOTAL_TYPES;
+    //    planets->planet_update_flags |= PLANET_UPDATE;
+    planets->planet_uvs[planet_index * 12] = 0.0f;
+    planets->planet_uvs[planet_index * 12 + 1] = 1.0f;
+    planets->planet_uvs[planet_index * 12 + 2] = 1.0f;
+    planets->planet_uvs[planet_index * 12 + 3] = 0.0f;
+    planets->planet_uvs[planet_index * 12 + 4] = 0.0f;
+    planets->planet_uvs[planet_index * 12 + 5] = 0.0f;
+    planets->planet_uvs[planet_index * 12 + 6] = 0.0f;
+    planets->planet_uvs[planet_index * 12 + 7] = 1.0f;
+    planets->planet_uvs[planet_index * 12 + 8] = 1.0f;
+    planets->planet_uvs[planet_index * 12 + 9] = 0.0f;
+    planets->planet_uvs[planet_index * 12 + 10] = 1.0f;
+    planets->planet_uvs[planet_index * 12 + 11] = 1.0f;
 }
 
 void planet_update_color(Planets *planets, int planet_index)
 {
+    float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    switch (planets->planet_type[planet_index])
+    {
+    case EARTH:
+        color[0] = 0.0f;
+        color[1] = 0.5f;
+        color[2] = 1.0f;
+        break;
+    case MARS:
+        color[0] = 0.8f;
+        color[1] = 0.4f;
+        color[2] = 0.2f;
+        break;
+    case MERCURY:
+        color[1] = 0.2f;
+        color[2] = 0.2f;
+        break;
+    case VENUS:
+        color[1] = 0.7f;
+        color[2] = 0.2f;
+        break;
+    case SUN:
+        color[1] = 0.4f;
+        color[2] = 0.0f;
+        break;
+    default:
+        break;
+    }
     for (int i = 0; i < 6; i++)
     {
-        planets->planet_colors[planet_index * 24 + i * 4] = 1.0f;
-        planets->planet_colors[planet_index * 24 + i * 4 + 1] = 1.0f;
-        planets->planet_colors[planet_index * 24 + i * 4 + 2] = 1.0f;
-        planets->planet_colors[planet_index * 24 + i * 4 + 3] = 1.0f;
+        planets->planet_colors[planet_index * 24 + i * 4] = color[0];
+        planets->planet_colors[planet_index * 24 + i * 4 + 1] = color[1];
+        planets->planet_colors[planet_index * 24 + i * 4 + 2] = color[2];
+        planets->planet_colors[planet_index * 24 + i * 4 + 3] = color[3];
     }
     planets->planet_update_flags |= PLANET_UPDATE;
+}
+
+int planet_find_closest(Planets *planets, int x, int y)
+{
+    int min = -1;
+    int min_index = -1;
+    for (int i = 0; i < planets->planet_buffer_size; i++)
+    {
+        int planet_x = planets->planet_tile_indices[i * 2];
+        int planet_y = planets->planet_tile_indices[i * 2 + 1];
+        int q, r, planet_q, planet_r;
+        hex_grid_offset_to_axial(x, y, &q, &r);
+        hex_grid_offset_to_axial(planet_x, planet_y, &planet_q, &planet_r);
+        int distance = hex_grid_get_axial_distance(q, r, planet_q, planet_r);
+        if (distance < min || min == -1)
+        {
+            min = distance;
+            min_index = i;
+        }
+    }
+    return min_index;
+}
+
+bool planet_on_tile(Planets *planets, int x, int y)
+{
+    for (int i = 0; i < planets->planet_buffer_size; i++)
+    {
+        if (planets->planet_tile_indices[i * 2] == x && planets->planet_tile_indices[i * 2 + 1] == y)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 void planets_clear(Planets *planets)

@@ -9,16 +9,20 @@
 #include <memory.h>
 #include <stdlib.h>
 
+static float g_size_x = BOARD_HEX_TILE_WIDTH / 4.0f;
+static float g_size_y = BOARD_HEX_TILE_HEIGHT / 4.0f;
+
 static float g_health_bar_size_x = BOARD_HEX_TILE_WIDTH / 2.0f;
 static float g_health_bar_size_y = BOARD_HEX_TILE_HEIGHT / 12.0f;
-static float g_health_bar_offset_x = BOARD_HEX_TILE_WIDTH / 4.0f;
-static float g_health_bar_offset_y = BOARD_HEX_TILE_HEIGHT / 2.0f - (BOARD_HEX_TILE_HEIGHT / 3.0f);
+static float g_health_bar_offset_x = -BOARD_HEX_TILE_WIDTH / 2.0f;
+static float g_health_bar_offset_y = -BOARD_HEX_TILE_HEIGHT / 2.0f;
 
 // TODO: set this up in a file
 static float unit_base_damage[] = {0.0f, 400.0f, 160.0f, 0.0f};
 static float unit_base_health[] = {50.0f, 400.0f, 100.0f, 500.0f};
 static float unit_base_movement[] = {4.0f, 1.0f, 2.0f, 0.0f};
 static int unit_base_resource_cost[] = {0, 50, 500, 40, 150, 3000, 10, 50, 1250, 0, 0, 0};
+static int unit_base_cost[] = {750, 3000, 1000, 0};
 
 static int g_stash_x = -1;
 static int g_stash_y = -1;
@@ -54,6 +58,10 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     da_int_init(&units->moves_unit_index, 1);
     da_int_init(&units->moves_list, 4);
     da_int_init(&units->move_type, 1);
+
+    da_int_init(&units->current_status_unit_index, 1);
+    da_int_init(&units->unit_current_status, 1);
+    da_int_init(&units->unit_status_started, 1);
 
     units->unit_owner = malloc(sizeof(int));
     if (units->unit_owner == NULL)
@@ -286,6 +294,8 @@ void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension
     units->unit_indices[unit_index * 2] = -1;
     units->unit_indices[unit_index * 2 + 1] = -1;
 
+    unit_cancel_action(units, unit_index);
+
     units->unit_update_flags |= UNIT_UPDATE | UNIT_UPDATE_HEALTH;
 }
 
@@ -324,9 +334,9 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     return BOTH_DESTROYED;
 }
 
-void unit_replenish_health(Units *units, int unit_index)
+void unit_replenish_health(Units *units, int unit_index, float amount)
 {
-    units->unit_health[unit_index] += 25.0f;
+    units->unit_health[unit_index] += amount;
     if (units->unit_health[unit_index] >= unit_base_health[units->unit_type[unit_index]])
     {
         units->unit_health[unit_index] = unit_base_health[units->unit_type[unit_index]];
@@ -358,19 +368,30 @@ bool unit_purchase(int player_index, Resources *resources, Units *units, UnitTyp
 bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
                               int board_dimension_x, int board_dimension_y)
 {
-    if (unit_type == DROID && *score >= 50)
+    if (unit_type == WORKER && *score >= unit_base_cost[WORKER])
     {
         unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
-        *score -= 50;
+        *score -= unit_base_cost[WORKER];
         return true;
     }
-    if (unit_type == BATTLESHIP && *score >= 150)
+    if (unit_type == DROID && *score >= unit_base_cost[DROID])
     {
         unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
-        *score -= 150;
+        *score -= unit_base_cost[DROID];
+        return true;
+    }
+    if (unit_type == BATTLESHIP && *score >= unit_base_cost[BATTLESHIP])
+    {
+        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
+        *score -= unit_base_cost[BATTLESHIP];
         return true;
     }
     return false;
+}
+
+int unit_get_base_cost(UnitType unit_type)
+{
+    return unit_base_cost[unit_type];
 }
 
 bool unit_can_move(Units *units, int unit_index, int destination_x, int destination_y, int board_dimension_x)
@@ -498,24 +519,23 @@ void unit_claim_territory(Units *units, int unit_index, int x, int y, int board_
 
 void unit_update_position(Units *units, int unit_index, int x, int y)
 {
-    units->unit_positions[unit_index * 12] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
-    units->unit_positions[unit_index * 12 + 1] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
-    units->unit_positions[unit_index * 12 + 2] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
-    units->unit_positions[unit_index * 12 + 3] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
-    units->unit_positions[unit_index * 12 + 4] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
-    units->unit_positions[unit_index * 12 + 5] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
-    units->unit_positions[unit_index * 12 + 6] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f;
-    units->unit_positions[unit_index * 12 + 7] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
-    units->unit_positions[unit_index * 12 + 8] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
-    units->unit_positions[unit_index * 12 + 9] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
-    units->unit_positions[unit_index * 12 + 10] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + BOARD_HEX_TILE_WIDTH;
-    units->unit_positions[unit_index * 12 + 11] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + BOARD_HEX_TILE_HEIGHT;
+    float start_x = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + (BOARD_HEX_TILE_WIDTH - g_size_x);
+    float start_y = (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f +
+                    (BOARD_HEX_TILE_HEIGHT - g_size_y);
+    float end_x = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + g_size_x;
+    float end_y = (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + g_size_y;
+    units->unit_positions[unit_index * 12] = start_x;
+    units->unit_positions[unit_index * 12 + 1] = end_y;
+    units->unit_positions[unit_index * 12 + 2] = end_x;
+    units->unit_positions[unit_index * 12 + 3] = start_y;
+    units->unit_positions[unit_index * 12 + 4] = start_x;
+    units->unit_positions[unit_index * 12 + 5] = start_y;
+    units->unit_positions[unit_index * 12 + 6] = start_x;
+    units->unit_positions[unit_index * 12 + 7] = end_y;
+    units->unit_positions[unit_index * 12 + 8] = end_x;
+    units->unit_positions[unit_index * 12 + 9] = start_y;
+    units->unit_positions[unit_index * 12 + 10] = end_x;
+    units->unit_positions[unit_index * 12 + 11] = end_y;
 
     unit_update_health_position(units, unit_index);
 
@@ -669,18 +689,18 @@ bool unit_animate_movement(Units *units)
                   (float)(units->moves_list.array[2] % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f;
     float new_x = glm_lerp(start_x, end_x, units->unit_animation_progress);
     float new_y = glm_lerp(start_y, end_y, units->unit_animation_progress);
-    units->unit_positions[unit_index * 12] = new_x;
-    units->unit_positions[unit_index * 12 + 1] = new_y + BOARD_HEX_TILE_HEIGHT;
-    units->unit_positions[unit_index * 12 + 2] = new_x + BOARD_HEX_TILE_WIDTH;
-    units->unit_positions[unit_index * 12 + 3] = new_y;
-    units->unit_positions[unit_index * 12 + 4] = new_x;
-    units->unit_positions[unit_index * 12 + 5] = new_y;
-    units->unit_positions[unit_index * 12 + 6] = new_x;
-    units->unit_positions[unit_index * 12 + 7] = new_y + BOARD_HEX_TILE_HEIGHT;
-    units->unit_positions[unit_index * 12 + 8] = new_x + BOARD_HEX_TILE_WIDTH;
-    units->unit_positions[unit_index * 12 + 9] = new_y;
-    units->unit_positions[unit_index * 12 + 10] = new_x + BOARD_HEX_TILE_WIDTH;
-    units->unit_positions[unit_index * 12 + 11] = new_y + BOARD_HEX_TILE_HEIGHT;
+    units->unit_positions[unit_index * 12] = new_x + (BOARD_HEX_TILE_WIDTH - g_size_x);
+    units->unit_positions[unit_index * 12 + 1] = new_y + g_size_y;
+    units->unit_positions[unit_index * 12 + 2] = new_x + g_size_x;
+    units->unit_positions[unit_index * 12 + 3] = new_y + (BOARD_HEX_TILE_HEIGHT - g_size_y);
+    units->unit_positions[unit_index * 12 + 4] = new_x + (BOARD_HEX_TILE_WIDTH - g_size_x);
+    units->unit_positions[unit_index * 12 + 5] = new_y + (BOARD_HEX_TILE_HEIGHT - g_size_y);
+    units->unit_positions[unit_index * 12 + 6] = new_x + (BOARD_HEX_TILE_WIDTH - g_size_x);
+    units->unit_positions[unit_index * 12 + 7] = new_y + g_size_y;
+    units->unit_positions[unit_index * 12 + 8] = new_x + g_size_x;
+    units->unit_positions[unit_index * 12 + 9] = new_y + (BOARD_HEX_TILE_HEIGHT - g_size_y);
+    units->unit_positions[unit_index * 12 + 10] = new_x + g_size_x;
+    units->unit_positions[unit_index * 12 + 11] = new_y + g_size_y;
 
     unit_update_health_position(units, unit_index);
 
@@ -700,6 +720,138 @@ bool unit_animate_movement(Units *units)
     // TODO: replace 0.05f with variable
     units->unit_animation_progress += 0.05f;
     return false;
+}
+
+bool unit_doing_action(Units *units, int unit_index, UnitAction action)
+{
+    for (int i = 0; i < units->current_status_unit_index.used; i++)
+    {
+        if (units->current_status_unit_index.array[i] == unit_index)
+        {
+            if (units->unit_current_status.array[i] == action)
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+    return false;
+}
+
+UnitAction unit_get_current_action(Units *units, int unit_index)
+{
+    for (int i = 0; i < units->current_status_unit_index.used; i++)
+    {
+        if (units->current_status_unit_index.array[i] == unit_index)
+        {
+            return units->unit_current_status.array[i];
+        }
+    }
+    return UNIT_NO_ACTION;
+}
+
+int unit_get_current_action_starting_turn(Units *units, int unit_index)
+{
+    for (int i = 0; i < units->current_status_unit_index.used; i++)
+    {
+        if (units->current_status_unit_index.array[i] == unit_index)
+        {
+            return units->unit_status_started.array[i];
+        }
+    }
+    return -1;
+}
+
+void unit_cancel_action(Units *units, int unit_index)
+{
+    for (int i = 0; i < units->current_status_unit_index.used; i++)
+    {
+        if (units->current_status_unit_index.array[i] == unit_index)
+        {
+            da_int_remove(&units->current_status_unit_index, i);
+            da_int_remove(&units->unit_current_status, i);
+            da_int_remove(&units->unit_status_started, i);
+        }
+    }
+}
+
+void units_process_actions(Units *units, int turn, int board_dimension_x, int board_dimension_y)
+{
+    for (int i = 0; i < units->current_status_unit_index.used; i++)
+    {
+        switch (units->unit_current_status.array[i])
+        {
+        case UNIT_BUILD_STATION:
+            // TODO: move this logic elsewhere
+            if (turn - units->unit_status_started.array[i] >= 5)
+            {
+                int unit_index = units->current_status_unit_index.array[i];
+                int unit_owner = units->unit_owner[unit_index];
+                int x = units->unit_indices[unit_index * 2];
+                int y = units->unit_indices[unit_index * 2 + 1];
+                if (unit_index > -1 && unit_owner > 0 && x > -1 && y > -1 && x < board_dimension_x &&
+                    y < board_dimension_y)
+                {
+                    unit_remove(units, unit_index, x, y, board_dimension_x);
+                    unit_add(units, unit_owner, STATION, x, y, board_dimension_x, board_dimension_y);
+                }
+            }
+            break;
+        case UNIT_NO_ACTION:
+        default:
+            break;
+        }
+    }
+}
+
+int units_find_nearest_friendly(Units *units, int player_index, int x, int y, int max_distance)
+{
+    int unit_index = -1;
+    int min = -1;
+    for (int i = 0; i < units->unit_buffer_size; i++)
+    {
+        if (units->unit_indices[i * 2] == -1 || units->unit_indices[i * 2 + 1] == -1 ||
+            units->unit_owner[i] != player_index + 1)
+        {
+            continue;
+        }
+        int q, r;
+        hex_grid_offset_to_axial(x, y, &q, &r);
+        int friend_q, friend_r;
+        hex_grid_offset_to_axial(units->unit_indices[i * 2], units->unit_indices[i * 2 + 1], &friend_q, &friend_r);
+        int distance = hex_grid_get_axial_distance(q, r, friend_q, friend_r);
+        if (distance < max_distance && (distance < min || min == -1))
+        {
+            min = distance;
+            unit_index = i;
+        }
+    }
+    return unit_index;
+}
+
+int units_find_nearest_enemy(Units *units, int player_index, int x, int y, int max_distance)
+{
+    int unit_index = -1;
+    int min = -1;
+    for (int i = 0; i < units->unit_buffer_size; i++)
+    {
+        if (units->unit_indices[i * 2] == -1 || units->unit_indices[i * 2 + 1] == -1 ||
+            units->unit_owner[i] == player_index + 1)
+        {
+            continue;
+        }
+        int q, r;
+        hex_grid_offset_to_axial(x, y, &q, &r);
+        int friend_q, friend_r;
+        hex_grid_offset_to_axial(units->unit_indices[i * 2], units->unit_indices[i * 2 + 1], &friend_q, &friend_r);
+        int distance = hex_grid_get_axial_distance(q, r, friend_q, friend_r);
+        if (distance < max_distance && (distance < min || min == -1))
+        {
+            min = distance;
+            unit_index = i;
+        }
+    }
+    return unit_index;
 }
 
 void units_clear(Units *units)

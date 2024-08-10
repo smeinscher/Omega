@@ -5,6 +5,8 @@
 #include "main_game_scene.h"
 #include "../../external/nuklear/nuklear.h"
 #include "../objects/board.h"
+#include "../objects/planets_shader.h"
+#include "../objects/star_background.h"
 #include "../platform/platform.h"
 #include "../players/players.h"
 #include "../renderer/camera.h"
@@ -22,6 +24,8 @@
 
 static Board *g_current_board = NULL;
 static Players *g_players = NULL;
+static StarBackground *g_star_background = NULL;
+static PlanetsShader *g_planets_shader = NULL;
 
 static Shader g_board_outline_program = {0};
 static unsigned int g_board_outline_id = 0;
@@ -35,6 +39,11 @@ static Shader g_board_unit_health_bar_program = {0};
 static unsigned int g_board_unit_health_bar_id;
 static Shader g_board_planet_program = {0};
 static unsigned int g_board_planet_id = 0;
+static Shader g_star_background_program = {0};
+static unsigned int g_star_background_id = 0;
+static Shader g_planet_shader_program = {0};
+static unsigned int g_planet_shader_id = 0;
+
 static Texture g_board_texture = {0};
 static Texture g_unit_texture = {0};
 static Texture g_health_bar_texture = {0};
@@ -758,6 +767,7 @@ void main_game_scene_init()
     platform_set_callbacks(main_game_scene_glfw_framebuffer_size_callback, main_game_scene_glfw_key_callback,
                            main_game_scene_glfw_cursor_position_callback, main_game_scene_glfw_mouse_button_callback,
                            main_game_scene_glfw_scroll_callback);
+    g_star_background = star_background_create();
     g_players = players_create(MAX_PLAYERS, 0, NULL);
     g_pause = g_players->human_players_count == 0;
     Board *board = board_create(13, 13, MAX_PLAYERS);
@@ -792,10 +802,22 @@ void main_game_scene_init()
                                  board->units->unit_health_colors, board->units->unit_buffer_size * 6, NULL, 0, 0);
 
     g_board_planet_program =
-        opengl_load_basic_shaders("../resources/shaders/board_borders.vert", "../resources/shaders/board_borders.frag");
+        opengl_load_basic_shaders("../resources/shaders/planets.vert", "../resources/shaders/planets.frag");
     g_board_planet_id =
         basic_vertex_data_create(board->planets->planet_positions, 2, board->planets->planet_uvs,
                                  board->planets->planet_colors, board->planets->planet_buffer_size * 6, NULL, 0, 0);
+
+    g_star_background_program = opengl_load_basic_shaders("../resources/shaders/star_background.vert",
+                                                          "../resources/shaders/star_background.frag");
+    g_star_background_id = basic_vertex_data_create(g_star_background->star_background_positions, 2, NULL,
+                                                    g_star_background->star_background_colors, 6, NULL, 0, 0);
+
+    g_planets_shader = planets_shader_create(board->board_dimension_x, board->board_dimension_y);
+    g_planet_shader_program =
+        opengl_load_basic_shaders("../resources/shaders/planets.vert", "../resources/shaders/planets.frag");
+    g_planet_shader_id =
+        basic_vertex_data_create(g_planets_shader->planet_positions, 2, g_planets_shader->planet_uvs,
+                                 g_planets_shader->planet_colors, g_planets_shader->planet_buffer_size * 6, NULL, 0, 0);
 
     g_current_board = board;
 
@@ -843,7 +865,7 @@ void main_game_scene_init()
     }
     else if (!g_pause)
     {
-        player_start_turn(g_current_board, g_players, 0);
+        //        player_start_turn(g_current_board, g_players, 0);
     }
 }
 
@@ -906,6 +928,8 @@ void main_game_scene_update()
         if (!g_pause && g_players->player_flags & PLAYER_ENDED_TURN)
         {
             board_process_planet_orbit(g_current_board);
+            units_process_actions(g_current_board->units, g_current_board->board_current_turn / 4,
+                                  g_current_board->board_dimension_x, g_current_board->board_dimension_y);
             player_start_turn(g_current_board, g_players, g_current_board->board_current_turn % 4);
         }
     }
@@ -943,6 +967,9 @@ void main_game_scene_render()
     opengl_shader_hot_reload(&g_board_outline_program);
     opengl_shader_hot_reload(&g_board_borders_program);
     opengl_shader_hot_reload(&g_board_fill_program);
+    opengl_shader_hot_reload(&g_star_background_program);
+    opengl_shader_hot_reload(&g_planet_shader_program);
+
     opengl_set_uniform_mat4(g_board_borders_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(g_board_borders_program.program, "projection", (vec4 *)camera_get_projection());
     opengl_set_uniform_mat4(g_board_outline_program.program, "view", (vec4 *)camera_get_view());
@@ -955,6 +982,11 @@ void main_game_scene_render()
     opengl_set_uniform_mat4(g_board_unit_health_bar_program.program, "projection", (vec4 *)camera_get_projection());
     opengl_set_uniform_mat4(g_board_planet_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(g_board_planet_program.program, "projection", (vec4 *)camera_get_projection());
+    opengl_set_uniform_mat4(g_planet_shader_program.program, "view", (vec4 *)camera_get_view());
+    opengl_set_uniform_mat4(g_planet_shader_program.program, "projection", (vec4 *)camera_get_projection());
+    static float time = 0.0f;
+    time += 0.05f;
+    opengl_set_uniform_float(g_star_background_program.program, "time", time);
 
     if (g_current_board->board_update_flags & BOARD_UPDATE_FILL)
     {
@@ -988,11 +1020,14 @@ void main_game_scene_render()
                                  g_current_board->planets->planet_uvs, g_current_board->planets->planet_colors,
                                  g_current_board->planets->planet_buffer_size * 6);
     }
+    basic_draw_arrays(g_star_background_id, g_star_background_program.program, GL_TRIANGLES);
     glBindTexture(GL_TEXTURE_2D, g_board_texture.id);
     basic_draw_elements(g_board_outline_id, g_board_outline_program.program, GL_LINES);
     basic_draw_arrays(g_board_fill_id, g_board_fill_program.program, GL_TRIANGLES);
     basic_draw_arrays(g_board_borders_id, g_board_borders_program.program, GL_TRIANGLES);
-    glBindTexture(GL_TEXTURE_2D, g_planet_texture.id);
+
+    // basic_draw_arrays(g_planet_shader_id, g_planet_shader_program.program, GL_TRIANGLES);
+    // glBindTexture(GL_TEXTURE_2D, g_planet_texture.id);
     basic_draw_arrays(g_board_planet_id, g_board_planet_program.program, GL_TRIANGLES);
     glBindTexture(GL_TEXTURE_2D, g_unit_texture.id);
     basic_draw_arrays(g_board_unit_id, g_board_unit_program.program, GL_TRIANGLES);
@@ -1078,7 +1113,7 @@ void main_game_scene_render()
                  nk_rect(margin_edge, (float)platform_get_window_height() / 2.0f + margin_y, width, height),
                  NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_NO_SCROLLBAR))
     {
-        nk_layout_row_static(ctx, 25, 150, 1);
+        nk_layout_row_static(ctx, 25, 250, 1);
 
         if ((g_current_board->selected_tile_index_x != -1 && g_current_board->selected_tile_index_y != -1) ||
             (g_current_board->last_selected_tile_index_x != -1 && g_current_board->last_selected_tile_index_y != -1))
@@ -1097,6 +1132,34 @@ void main_game_scene_render()
                     g_current_board->units->unit_tile_occupation_status[g_current_board->last_selected_tile_index_y *
                                                                             g_current_board->board_dimension_x +
                                                                         g_current_board->last_selected_tile_index_x];
+            }
+            if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == WORKER &&
+                g_current_board->units->unit_owner[selected_unit] ==
+                    g_current_board->board_current_turn % g_players->player_count + 1)
+            {
+                if (unit_doing_action(g_current_board->units, selected_unit, UNIT_BUILD_STATION))
+                {
+                    int turn = unit_get_current_action_starting_turn(g_current_board->units, selected_unit);
+                    char building_station_turn_buffer[40];
+                    // TODO: make 5 a variable somewhere
+                    sprintf(building_station_turn_buffer, "Building Station (%d turns left)",
+                            5 - (g_current_board->board_current_turn / g_current_board->player_count - turn));
+                    nk_label(ctx, building_station_turn_buffer, NK_TEXT_ALIGN_LEFT);
+                }
+                else if (nk_button_label(ctx, "Create Station"))
+                {
+                    board_worker_build_station(g_current_board, selected_unit);
+                }
+            }
+            if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION &&
+                g_current_board->units->unit_owner[selected_unit] ==
+                    g_current_board->board_current_turn % g_players->player_count + 1 &&
+                nk_button_label(ctx, "Create Worker"))
+            {
+                board_highlight_possible_unit_placement(g_current_board, selected_unit,
+                                                        g_current_board->last_selected_tile_index_x,
+                                                        g_current_board->last_selected_tile_index_y);
+                g_place_unit_type = WORKER;
             }
             if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION &&
                 g_current_board->units->unit_owner[selected_unit] ==

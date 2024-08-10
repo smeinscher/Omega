@@ -13,6 +13,12 @@
 
 #define TOTAL_UNIT_TYPES 4
 
+typedef enum UnitAction
+{
+    UNIT_BUILD_STATION,
+    UNIT_NO_ACTION
+} UnitAction;
+
 typedef enum UnitType
 {
     WORKER,
@@ -68,6 +74,10 @@ typedef struct Units
     DynamicIntArray moves_unit_index;
     DynamicIntArray moves_list;
     DynamicIntArray move_type;
+
+    DynamicIntArray current_status_unit_index;
+    DynamicIntArray unit_current_status;
+    DynamicIntArray unit_status_started;
 } Units;
 
 Units *units_create(int board_dimension_x, int board_dimension_y);
@@ -82,7 +92,7 @@ void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension
 
 BattleResult unit_attack(Units *units, int defender_index, int attacker_index);
 
-void unit_replenish_health(Units *units, int unit_index);
+void unit_replenish_health(Units *units, int unit_index, float amount);
 
 void unit_replenish_movement(Units *units, int unit_index);
 
@@ -92,10 +102,12 @@ bool unit_purchase(int player_index, Resources *resources, Units *units, UnitTyp
 bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
                               int board_dimension_x, int board_dimension_y);
 
+int unit_get_base_cost(UnitType unit_type);
+
 bool unit_can_move(Units *units, int unit_index, int destination_x, int destination_y, int board_dimension_x);
 
-void unit_move(Units *units, int unit_index, DynamicIntArray *move_path,
-               int end_x, int end_y, int board_dimension_x, int board_dimension_y);
+void unit_move(Units *units, int unit_index, DynamicIntArray *move_path, int end_x, int end_y, int board_dimension_x,
+               int board_dimension_y);
 
 void unit_stash_position(int x, int y);
 
@@ -123,6 +135,20 @@ void unit_add_movement_animation(Units *units, int unit_index, int start_x, int 
                                  int move_type);
 
 bool unit_animate_movement(Units *units);
+
+bool unit_doing_action(Units *units, int unit_index, UnitAction action);
+
+UnitAction unit_get_current_action(Units *units, int unit_index);
+
+int unit_get_current_action_starting_turn(Units *units, int unit_index);
+
+void unit_cancel_action(Units *units, int unit_index);
+
+void units_process_actions(Units *units, int turn, int board_dimension_x, int board_dimension_y);
+
+int units_find_nearest_friendly(Units *units, int player_index, int x, int y, int max_distance);
+
+int units_find_nearest_enemy(Units *units, int player_index, int x, int y, int max_distance);
 
 void units_clear(Units *units);
 

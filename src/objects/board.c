@@ -358,14 +358,22 @@ bool in_board_attackable_tiles(Board *board, int move_x, int move_y)
 
 bool in_board_moveable_tiles(Board *board, int move_x, int move_y)
 {
-    for (int i = 0; i < board->board_moveable_tiles->used; i += 2)
+    if (board->board_moveable_tiles != NULL)
     {
-        int x = board->board_moveable_tiles->array[i];
-        int y = board->board_moveable_tiles->array[i + 1];
-        if (x == move_x && y == move_y)
+
+        for (int i = 0; i < board->board_moveable_tiles->used; i += 2)
         {
-            return true;
+            int x = board->board_moveable_tiles->array[i];
+            int y = board->board_moveable_tiles->array[i + 1];
+            if (x == move_x && y == move_y)
+            {
+                return true;
+            }
         }
+    }
+    else
+    {
+        printf("yikes\n");
     }
     return false;
 }
@@ -420,10 +428,13 @@ void board_handle_tile_click(Board *board)
         board->board_moveable_tiles =
             hex_grid_possible_moves(board, unit_index, board->mouse_tile_index_x, board->mouse_tile_index_y);
 
-        da_int_free(board->board_attackable_tiles);
-        free(board->board_attackable_tiles);
-        board->board_attackable_tiles =
-            hex_grid_possible_attacks(board, unit_index, board->mouse_tile_index_x, board->mouse_tile_index_y);
+        if (board->units->unit_type[unit_index] != WORKER)
+        {
+            da_int_free(board->board_attackable_tiles);
+            free(board->board_attackable_tiles);
+            board->board_attackable_tiles =
+                hex_grid_possible_attacks(board, unit_index, board->mouse_tile_index_x, board->mouse_tile_index_y);
+        }
     }
     else
     {
@@ -442,6 +453,7 @@ void board_handle_tile_click(Board *board)
                 int enemy_unit_index =
                     board->units->unit_tile_occupation_status[move_y * board->board_dimension_x + move_x];
                 board_process_attack(board, enemy_unit_index, unit_index);
+                unit_cancel_action(board->units, unit_index);
             }
             else if (can_move)
             {
@@ -449,6 +461,7 @@ void board_handle_tile_click(Board *board)
                                             board->selected_tile_index_y, move_x, move_y, REGULAR);
                 unit_occupy_new_tile(board->units, unit_index, board->selected_tile_index_x,
                                      board->selected_tile_index_y, move_x, move_y, board->board_dimension_x);
+                unit_cancel_action(board->units, unit_index);
                 /*
                                 unit_move(board->units, unit_index, board->selected_tile_index_x,
                    board->selected_tile_index_y, move_x, move_y, board->board_dimension_x, board->board_dimension_y);
@@ -869,6 +882,7 @@ BattleResult board_process_attack(Board *board, int defender_index, int attacker
         else
         {
             board->units->unit_owner[defender_index] = board->units->unit_owner[attacker_index];
+            board->units->unit_health[defender_index] = 0.0f;
             unit_update_color(board->units, defender_index);
             unit_claim_territory(board->units, defender_index, move_x, move_y, board->board_dimension_x,
                                  board->board_dimension_y);
@@ -912,6 +926,13 @@ void board_highlight_possible_unit_placement(Board *board, int station_index, in
     free(board->board_moveable_tiles);
     board->board_moveable_tiles = hex_grid_possible_moves(board, station_index, station_x, station_y);
     board->board_update_flags |= BOARD_UPDATE_FILL;
+}
+
+void board_worker_build_station(Board *board, int worker_index)
+{
+    da_int_push_back(&board->units->current_status_unit_index, worker_index);
+    da_int_push_back(&board->units->unit_current_status, UNIT_BUILD_STATION);
+    da_int_push_back(&board->units->unit_status_started, board->board_current_turn / board->player_count);
 }
 
 void board_clear(Board *board)

@@ -50,7 +50,7 @@ void platform_set_callbacks(void *framebuffer_size, void *key, void *cursor_pos,
 void platform_init_nuklear()
 {
     omega_nuklear_init(g_main_window);
-    omega_nuklear_set_style(OMEGA_NUKLEAR_DARK);
+    omega_nuklear_set_style(OMEGA_NUKLEAR_BLUE);
 }
 
 bool platform_window_should_close()

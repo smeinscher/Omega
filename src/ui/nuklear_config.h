@@ -13,7 +13,8 @@
 
 typedef enum OmegaStyle
 {
-    OMEGA_NUKLEAR_DARK
+    OMEGA_NUKLEAR_DARK,
+    OMEGA_NUKLEAR_BLUE
 } OmegaStyle;
 
 void omega_nuklear_init(GLFWwindow *main_window);
@@ -28,4 +29,4 @@ void omega_nuklear_end();
 
 void omega_nuklear_shutdown();
 
-#endif //NUKLEAR_CONFIG_H
+#endif // NUKLEAR_CONFIG_H

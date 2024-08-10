@@ -84,6 +84,8 @@ bool board_tile_is_occupied(Board *board, int x, int y);
 
 void board_highlight_possible_unit_placement(Board *board, int station_index, int station_x, int station_y);
 
+void board_worker_build_station(Board *board, int worker_index);
+
 void board_clear(Board *board);
 
 void board_destroy(Board *board);

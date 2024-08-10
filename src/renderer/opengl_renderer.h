@@ -7,7 +7,7 @@
 
 #include <stddef.h>
 
-#define OMEGA_GAME_MAX_VERTEX_DATA_COUNT 8
+#define OMEGA_GAME_MAX_VERTEX_DATA_COUNT 16
 
 typedef struct BasicVertexData
 {
