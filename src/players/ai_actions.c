@@ -36,16 +36,16 @@ void ai_spawn_unit(Board *board, Players *players, int player_index, DynamicIntA
             switch (player_index)
             {
             case 0:
-                rand_unit = rand_unit > 600 ? DROID : WORKER;
+                rand_unit = rand_unit > 300 ? DROID : WORKER;
                 break;
             case 1:
                 rand_unit = rand_unit > 300 ? BATTLESHIP : WORKER;
                 break;
             case 2:
-                rand_unit = rand_unit > 1500 ? DROID : rand_unit > 600 ? BATTLESHIP : WORKER;
+                rand_unit = rand_unit > 1000 ? DROID : rand_unit > 300 ? BATTLESHIP : WORKER;
                 break;
             case 3:
-                rand_unit = rand_unit > 1500 ? BATTLESHIP : rand_unit > 600 ? DROID : WORKER;
+                rand_unit = rand_unit > 1000 ? BATTLESHIP : rand_unit > 300 ? DROID : WORKER;
                 break;
             default:
                 rand_unit = 2;
@@ -85,7 +85,7 @@ bool ai_unit_attack(Board *board, Players *players, int player_index, int unit_i
             BattleResult result = board_process_attack(board, defending_unit_index, unit_index);
             switch (result)
             {
-                // TODO: change score update to reflect unit type
+            // TODO: change score update to reflect unit type
             case NO_UNITS_DESTROYED:
                 break;
             case DEFENDER_DESTROYED:

@@ -31,4 +31,6 @@ DynamicIntArray *hex_grid_possible_moves(Board *board, int unit_index, int unit_
 
 DynamicIntArray *hex_grid_possible_attacks(Board *board, int unit_index, int unit_x, int unit_y);
 
+DynamicIntArray *hex_grid_possible_swaps(Board *board, int unit_index, int unit_x, int unit_y);
+
 #endif // OMEGAAPP_GENERAL_HELPERS_H

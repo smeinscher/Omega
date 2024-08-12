@@ -52,6 +52,7 @@ typedef struct Board
     DynamicIntArray *board_highlighted_path;
     DynamicIntArray *board_moveable_tiles;
     DynamicIntArray *board_attackable_tiles;
+    DynamicIntArray *board_swapable_tiles;
 
     Units *units;
 
@@ -80,11 +81,17 @@ void board_process_planet_orbit(Board *board);
 
 BattleResult board_process_attack(Board *board, int defender_index, int attacker_index);
 
+bool board_tile_in_bounds(Board *board, int x, int y);
+
 bool board_tile_is_occupied(Board *board, int x, int y);
 
 void board_highlight_possible_unit_placement(Board *board, int station_index, int station_x, int station_y);
 
 void board_worker_build_station(Board *board, int worker_index);
+
+int board_get_hex_tile_width();
+
+int board_get_hex_tile_height();
 
 void board_clear(Board *board);
 

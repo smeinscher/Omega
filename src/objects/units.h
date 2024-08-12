@@ -50,6 +50,14 @@ typedef struct Units
 
     float unit_animation_progress;
 
+    float unit_size_x;
+    float unit_size_y;
+
+    float unit_health_bar_size_x;
+    float unit_health_bar_size_y;
+    float unit_health_bar_offset_x;
+    float unit_health_bar_offset_y;
+
     int *unit_owner;
     float *unit_positions;
     float *unit_uvs;

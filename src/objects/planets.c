@@ -160,28 +160,34 @@ void planet_update_position(Planets *planets, int planet_index)
 {
     int x = planets->planet_tile_indices[planet_index * 2];
     int y = planets->planet_tile_indices[planet_index * 2 + 1];
-    float size_x = BOARD_HEX_TILE_HEIGHT * planets->planet_size[planet_index];
-    float size_y = BOARD_HEX_TILE_HEIGHT * planets->planet_size[planet_index];
-    float offset_x = (BOARD_HEX_TILE_WIDTH - size_x) / 2.0f;
-    float offset_y = ((1.0f - planets->planet_size[planet_index]) * BOARD_HEX_TILE_HEIGHT) / 2.0f;
-    planets->planet_positions[planet_index * 12] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + offset_x;
+    float size_x = board_get_hex_tile_height() * planets->planet_size[planet_index];
+    float size_y = board_get_hex_tile_height() * planets->planet_size[planet_index];
+    float offset_x = (board_get_hex_tile_width() - size_x) / 2.0f;
+    float offset_y = ((1.0f - planets->planet_size[planet_index]) * board_get_hex_tile_height()) / 2.0f;
+    planets->planet_positions[planet_index * 12] = (float)x * board_get_hex_tile_width() * 0.75f + offset_x;
     planets->planet_positions[planet_index * 12 + 1] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + offset_y + size_y;
-    planets->planet_positions[planet_index * 12 + 2] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + offset_x + size_x;
+        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y +
+        size_y;
+    planets->planet_positions[planet_index * 12 + 2] =
+        (float)x * board_get_hex_tile_width() * 0.75f + offset_x + size_x;
     planets->planet_positions[planet_index * 12 + 3] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + offset_y;
-    planets->planet_positions[planet_index * 12 + 4] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + offset_x;
+        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y;
+    planets->planet_positions[planet_index * 12 + 4] = (float)x * board_get_hex_tile_width() * 0.75f + offset_x;
     planets->planet_positions[planet_index * 12 + 5] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + offset_y;
-    planets->planet_positions[planet_index * 12 + 6] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + offset_x;
+        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y;
+    planets->planet_positions[planet_index * 12 + 6] = (float)x * board_get_hex_tile_width() * 0.75f + offset_x;
     planets->planet_positions[planet_index * 12 + 7] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + offset_y + size_y;
-    planets->planet_positions[planet_index * 12 + 8] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + offset_x + size_x;
+        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y +
+        size_y;
+    planets->planet_positions[planet_index * 12 + 8] =
+        (float)x * board_get_hex_tile_width() * 0.75f + offset_x + size_x;
     planets->planet_positions[planet_index * 12 + 9] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + offset_y;
-    planets->planet_positions[planet_index * 12 + 10] = (float)x * BOARD_HEX_TILE_WIDTH * 0.75f + offset_x + size_x;
+        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y;
+    planets->planet_positions[planet_index * 12 + 10] =
+        (float)x * board_get_hex_tile_width() * 0.75f + offset_x + size_x;
     planets->planet_positions[planet_index * 12 + 11] =
-        (float)y * BOARD_HEX_TILE_HEIGHT + (float)(x % 2) * BOARD_HEX_TILE_HEIGHT / 2.0f + offset_y + size_y;
+        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y +
+        size_y;
 
     planets->planet_update_flags |= PLANET_UPDATE;
 }

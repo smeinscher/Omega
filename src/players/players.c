@@ -209,7 +209,7 @@ void player_end_turn(Board *board, Players *players, int player_index)
     players->player_unit_count[player_index] = 0;
     if (!is_human_player(players, player_index))
     {
-        players->player_score[player_index] += 500;
+        players->player_score[player_index] += 100;
     }
     for (int i = 0; i < board->board_dimension_x * board->board_dimension_y; i++)
     {
@@ -220,10 +220,16 @@ void player_end_turn(Board *board, Players *players, int player_index)
             {
                 players->player_unit_count[player_index]++;
             }
-            if (board->units->unit_type[unit_index] == STATION &&
-                planet_on_tile(board->planets, i % board->board_dimension_x, i / board->board_dimension_x))
+            if (board->units->unit_type[unit_index] == STATION)
             {
-                players->player_score[player_index] += 500;
+                if (planet_on_tile(board->planets, i % board->board_dimension_x, i / board->board_dimension_x))
+                {
+                    players->player_score[player_index] += 500;
+                }
+                else
+                {
+                    players->player_score[player_index] += 200;
+                }
             }
             players->player_score[player_index] += 10;
         }

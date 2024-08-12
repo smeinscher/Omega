@@ -390,6 +390,11 @@ void free_nodes(Node *node)
 DynamicIntArray *hex_grid_possible_moves(Board *board, int unit_index, int unit_x, int unit_y)
 {
     DynamicIntArray *possible_tiles = malloc(sizeof(DynamicIntArray));
+    if (possible_tiles == NULL)
+    {
+        printf("Error allocating possible_tiles\n");
+        return NULL;
+    }
     // TODO: replace 36 with variable based on movement points
     da_int_init(possible_tiles, 36);
 
@@ -481,6 +486,11 @@ void hex_grid_fill_attackable_tiles(Board *board, int unit_index, DynamicIntArra
 DynamicIntArray *hex_grid_possible_attacks(Board *board, int unit_index, int unit_x, int unit_y)
 {
     DynamicIntArray *possible_tiles = malloc(sizeof(DynamicIntArray));
+    if (possible_tiles == NULL)
+    {
+        printf("Error allocating possible_tiles\n");
+        return NULL;
+    }
     // TODO: replace 10 with something else
     da_int_init(possible_tiles, 10);
 
@@ -500,5 +510,85 @@ DynamicIntArray *hex_grid_possible_attacks(Board *board, int unit_index, int uni
         hex_grid_fill_attackable_tiles(board, unit_index, possible_tiles, neighbors[i]);
         free_nodes(neighbors[i]);
     }
+    return possible_tiles;
+}
+
+Node *hex_grid_tile_fill_neighbors_all(Board *board, int q, int r, float movement_points)
+{
+    int x, y;
+    hex_grid_axial_to_offset(q, r, &x, &y);
+    if (movement_points < 0.0f || !board_tile_in_bounds(board, x, y))
+    {
+        return NULL;
+    }
+    Node *node = malloc(sizeof(Node));
+    node->position.q = q;
+    node->position.r = r;
+    for (int i = 0; i < 6; i++)
+    {
+        // TODO: replace 1.0f with actual movement cost
+        node->neighbors[i] =
+            hex_grid_tile_fill_neighbors(board, q + g_directions[i][0], r + g_directions[i][1], movement_points - 1.0f);
+    }
+    return node;
+}
+
+void hex_grid_fill_swapable_tiles(Board *board, int unit_index, DynamicIntArray *possible_tiles, Node *node)
+{
+    if (node == NULL)
+    {
+        return;
+    }
+    int x, y;
+    hex_grid_axial_to_offset(node->position.q, node->position.r, &x, &y);
+    bool in_possible_tiles = false;
+    for (int i = 0; i < possible_tiles->used; i += 2)
+    {
+        if (possible_tiles->array[i] == x && possible_tiles->array[i + 1] == y)
+        {
+            in_possible_tiles = true;
+        }
+    }
+    int current_tile_unit_index = board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
+    if (!in_possible_tiles && current_tile_unit_index != -1 && board->units->unit_movement_points[
+            current_tile_unit_index] >= 1.0f && board->units->unit_owner[unit_index] == board->units->unit_owner[
+            current_tile_unit_index])
+    {
+        da_int_push_back(possible_tiles, x);
+        da_int_push_back(possible_tiles, y);
+    }
+    for (int i = 0; i < 6; i++)
+    {
+        hex_grid_fill_swapable_tiles(board, unit_index, possible_tiles, node->neighbors[i]);
+    }
+}
+
+DynamicIntArray *hex_grid_possible_swaps(Board *board, int unit_index, int unit_x, int unit_y)
+{
+    DynamicIntArray *possible_tiles = malloc(sizeof(DynamicIntArray));
+    if (possible_tiles == NULL)
+    {
+        printf("Error allocating possible_tiles\n");
+        return NULL;
+    }
+    da_int_init(possible_tiles, 1);
+
+    int start_q, start_r;
+    hex_grid_offset_to_axial(unit_x, unit_y, &start_q, &start_r);
+
+    Node *neighbors[6];
+    for (int i = 0; i < 6; i++)
+    {
+        neighbors[i] = hex_grid_tile_fill_neighbors_all(
+            board, start_q + g_directions[i][0], start_r + g_directions[i][1],
+            board->units->unit_movement_points[unit_index] - 1.0f);
+    }
+
+    for (int i = 0; i < 6; i++)
+    {
+        hex_grid_fill_swapable_tiles(board, unit_index, possible_tiles, neighbors[i]);
+        free_nodes(neighbors[i]);
+    }
+
     return possible_tiles;
 }
