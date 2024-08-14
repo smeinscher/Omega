@@ -22,6 +22,8 @@ Shader opengl_load_basic_shaders(const char *vertex_shader_path, const char *fra
 
 void opengl_set_uniform_float(unsigned int program, const char *name, float f);
 
+void opengl_set_uniform_4f(unsigned int program, const char *name, float x, float y, float z, float w);
+
 void opengl_set_uniform_mat4(unsigned int program, const char *name, mat4 mat);
 
 void opengl_shader_hot_reload(Shader *shader);

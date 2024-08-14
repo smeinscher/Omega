@@ -157,7 +157,7 @@ void player_start_turn(Board *board, Players *players, int player_index)
                 for (int j = 0; j < 6; j++)
                 {
                     int x, y;
-                    hex_grid_axial_to_offset(q, r, &x, &y);
+                    hex_grid_axial_to_offset(q, r, board->units->unit_indices[i * 2 + 1], &x, &y);
                     x += board->board_dimension_x / 2;
                     y += board->board_dimension_y / 2;
                     int unit_index = board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
@@ -183,6 +183,7 @@ void player_start_turn(Board *board, Players *players, int player_index)
             }
         }
         ai_spawn_unit(board, players, player_index, &stations);
+        da_int_free(&stations);
 
         for (int i = 0; i < board->units->unit_buffer_size; i++)
         {
@@ -215,11 +216,13 @@ void player_end_turn(Board *board, Players *players, int player_index)
     {
         if (board->units->unit_tile_ownership_status[i] == player_index + 1)
         {
+            players->player_score[player_index] += 10;
             int unit_index = board->units->unit_tile_occupation_status[i];
-            if (unit_index != -1)
+            if (unit_index == -1)
             {
-                players->player_unit_count[player_index]++;
+                continue;
             }
+            players->player_unit_count[player_index]++;
             if (board->units->unit_type[unit_index] == STATION)
             {
                 if (planet_on_tile(board->planets, i % board->board_dimension_x, i / board->board_dimension_x))
@@ -231,7 +234,6 @@ void player_end_turn(Board *board, Players *players, int player_index)
                     players->player_score[player_index] += 200;
                 }
             }
-            players->player_score[player_index] += 10;
         }
     }
     board_process_turn(board);
@@ -261,6 +263,8 @@ void players_clear(Players *players)
     players->player_color = NULL;
     free(players->desired_unit_purchase);
     players->desired_unit_purchase = NULL;
+    free(players->player_unit_count);
+    players->player_unit_count = NULL;
     resources_destroy(players->resources);
     players->resources = NULL;
 }

@@ -104,11 +104,16 @@ bool ai_unit_attack(Board *board, Players *players, int player_index, int unit_i
         {
             printf("Error, defending_unit_index is -1\n");
         }
+        da_int_free(possible_attacks);
+        free(possible_attacks);
         return true;
     }
+    da_int_free(possible_attacks);
+    free(possible_attacks);
     return false;
 }
 
+// TODO: clean this mess up
 void ai_unit_move(Board *board, Players *players, int player_index, int unit_index)
 {
     // TODO: cache these results?

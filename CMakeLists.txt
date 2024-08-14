@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project(OmegaCradle C)
+project(OmegaTest C)
 project(OmegaApp C)
 
 set(CMAKE_C_STANDARD 11)
@@ -8,8 +9,10 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(cglm CONFIG REQUIRED)
 find_package(json-c CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(Freetype REQUIRED)
 
 add_executable(OmegaCradle src/main.c)
+add_executable(OmegaTest tst/main.c)
 add_library(OmegaApp SHARED
         external/glad/glad.h
         external/glad/glad.c
@@ -56,10 +59,13 @@ add_library(OmegaApp SHARED
         src/players/resources.h
         src/objects/star_background.c
         src/objects/star_background.h
-        src/objects/planets_shader.c
-        src/objects/planets_shader.h
         src/players/ai_actions.c
-        src/players/ai_actions.h)
+        src/players/ai_actions.h
+        src/renderer/opengl_freetype_wrapper.c
+        src/renderer/opengl_freetype_wrapper.h
+        src/objects/text.c
+        src/objects/text.h)
+
 
 target_link_libraries(OmegaApp
         PRIVATE
@@ -67,6 +73,8 @@ target_link_libraries(OmegaApp
         glfw
         json-c::json-c
         ${OPENGL_LIBRARIES}
+        Freetype::Freetype
 )
 
 target_link_libraries(OmegaCradle OmegaApp)
+target_link_libraries(OmegaTest OmegaApp)

@@ -130,6 +130,12 @@ void opengl_set_uniform_float(unsigned int program, const char *name, float f)
     glUniform1f(glGetUniformLocation(program, name), f);
 }
 
+void opengl_set_uniform_4f(unsigned int program, const char *name, float x, float y, float z, float w)
+{
+    glUseProgram(program);
+    glUniform4f(glGetUniformLocation(program, name), x, y, z, w);
+}
+
 void opengl_set_uniform_mat4(unsigned int program, const char *name, mat4 mat)
 {
     glUseProgram(program);

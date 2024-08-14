@@ -3,9 +3,9 @@
 //
 
 #include "units.h"
+#include "../renderer/camera.h"
 #include "../util/general_helpers.h"
 #include "board.h"
-#include "../renderer/camera.h"
 #include <cglm/util.h>
 #include <memory.h>
 #include <stdlib.h>
@@ -31,7 +31,7 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
 
     units->unit_buffer_size = 0;
     units->unit_update_flags = 0;
-    units->unit_animation_progress = 0.0f;
+    units->unit_animation_progress = -1.0f;
     units->unit_owner = NULL;
     units->unit_health = NULL;
     units->unit_positions = NULL;
@@ -45,6 +45,7 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     units->unit_movement_points = NULL;
     units->unit_type = NULL;
     units->unit_indices = NULL;
+    units->unit_name = NULL;
 
     units->unit_size_x = board_get_hex_tile_width() / 4.0f;
     units->unit_size_y = board_get_hex_tile_height() / 4.0f;
@@ -62,6 +63,8 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
     da_int_init(&units->current_status_unit_index, 1);
     da_int_init(&units->unit_current_status, 1);
     da_int_init(&units->unit_status_started, 1);
+
+    da_int_init(&units->unit_remove_list, 1);
 
     units->unit_owner = malloc(sizeof(int));
     if (units->unit_owner == NULL)
@@ -170,6 +173,18 @@ Units *units_create(int board_dimension_x, int board_dimension_y)
         return NULL;
     }
 
+    units->unit_name = malloc(sizeof(String));
+    if (units->unit_name == NULL)
+    {
+        printf("Error allocating unit_name\n");
+        units_destroy(units);
+        return NULL;
+    }
+
+    da_int_init(&units->display_info_unit_index, 1);
+    da_string_init(&units->unit_display_info, 1);
+    da_float_init(&units->unit_display_info_time, 1);
+
     unit_add(units, 1, DROID, 1, 0, board_dimension_x, board_dimension_y);
     unit_add(units, 1, STATION, 1, 1, board_dimension_x, board_dimension_y);
     unit_add(units, 2, DROID, 1, board_dimension_y - 1, board_dimension_x, board_dimension_y);
@@ -227,6 +242,7 @@ void unit_realloc(Units *units)
     realloc_float(&units->unit_movement_points, units->unit_buffer_size);
     realloc_int(&units->unit_type, units->unit_buffer_size);
     realloc_int(&units->unit_indices, units->unit_buffer_size * 2);
+    realloc_string(&units->unit_name, units->unit_buffer_size);
 }
 
 void unit_clear_vertices(Units *units)
@@ -262,6 +278,8 @@ void unit_add(Units *units, int owner, int type, int x, int y, int board_dimensi
     units->unit_type[new_unit_index] = type;
     units->unit_indices[new_unit_index * 2] = x;
     units->unit_indices[new_unit_index * 2 + 1] = y;
+    string_init(&units->unit_name[new_unit_index], 5);
+    string_push_back(&units->unit_name[new_unit_index], "Larry", 5);
 
     unit_update_position(units, new_unit_index, x, y);
 
@@ -296,6 +314,8 @@ void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension
 
     unit_cancel_action(units, unit_index);
 
+    string_free(&units->unit_name[unit_index]);
+
     units->unit_update_flags |= UNIT_UPDATE | UNIT_UPDATE_HEALTH;
 }
 
@@ -305,14 +325,32 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     // TODO: damage based on exp/level, and current health
     // TODO: also, find better random
     float attacker_base_damage = unit_base_damage[units->unit_type[attacker_index]];
-    units->unit_health[defender_index] -= ((float)(rand() % ((int)attacker_base_damage * 100)) + attacker_base_damage) /
-        unit_base_damage[units->unit_type[attacker_index]];
+    float attacker_damage = ((float)(rand() % ((int)attacker_base_damage * 100)) + attacker_base_damage) /
+                            unit_base_damage[units->unit_type[attacker_index]];
+    units->unit_health[defender_index] -= attacker_damage;
+    char buffer[10];
+    sprintf(buffer, "-%.2f", attacker_damage);
+    String str_def;
+    string_init(&str_def, 10);
+    string_push_back(&str_def, buffer, 10);
+    da_string_push_back(&units->unit_display_info, str_def);
+    string_free(&str_def);
+    da_int_push_back(&units->display_info_unit_index, defender_index);
+    da_float_push_back(&units->unit_display_info_time, 3.0f);
     if (units->unit_type[defender_index] != WORKER && units->unit_type[defender_index] != STATION)
     {
         float defender_base_damage = unit_base_damage[units->unit_type[defender_index]];
-        units->unit_health[attacker_index] -=
-            ((float)(rand() % ((int)defender_base_damage * 100)) + defender_base_damage) /
-            unit_base_damage[units->unit_type[defender_index]];
+        float defender_damage = ((float)(rand() % ((int)defender_base_damage * 100)) + defender_base_damage) /
+                                unit_base_damage[units->unit_type[defender_index]];
+        units->unit_health[attacker_index] -= defender_damage;
+        sprintf(buffer, "-%.2f", defender_damage);
+        String str_att;
+        string_init(&str_att, 10);
+        string_push_back(&str_att, buffer, 10);
+        da_string_push_back(&units->unit_display_info, str_att);
+        string_free(&str_att);
+        da_int_push_back(&units->display_info_unit_index, attacker_index);
+        da_float_push_back(&units->unit_display_info_time, 3.0f);
     }
     if (units->unit_health[defender_index] > 0.0f && units->unit_health[attacker_index] > 0.0f)
     {
@@ -336,11 +374,29 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
 
 void unit_replenish_health(Units *units, int unit_index, float amount)
 {
-    units->unit_health[unit_index] += amount;
-    if (units->unit_health[unit_index] >= unit_base_health[units->unit_type[unit_index]])
+    if (units->unit_health[unit_index] <= 0.0f)
+    {
+        return;
+    }
+    if (units->unit_health[unit_index] + amount > unit_base_health[units->unit_type[unit_index]])
+    {
+        amount = unit_base_health[units->unit_type[unit_index]] - units->unit_health[unit_index];
+    }
+    if (amount <= 0.0f)
     {
         units->unit_health[unit_index] = unit_base_health[units->unit_type[unit_index]];
+        return;
     }
+    char buffer[10];
+    sprintf(buffer, "+%.2f", amount);
+    String str;
+    string_init(&str, 10);
+    string_push_back(&str, buffer, 10);
+    da_string_push_back(&units->unit_display_info, str);
+    string_free(&str);
+    da_int_push_back(&units->display_info_unit_index, unit_index);
+    da_float_push_back(&units->unit_display_info_time, 3.0f);
+    units->unit_health[unit_index] += amount;
     unit_update_health_position(units, unit_index);
 }
 
@@ -446,8 +502,8 @@ void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_
     if (strategic_swap)
     {
         int start_q, start_r, target_q, target_r;
-        hex_grid_offset_to_axial(a_x, a_y, &start_q, &start_r);
-        hex_grid_offset_to_axial(b_x, b_y, &target_q, &target_r);
+        hex_grid_offset_to_axial(a_x, a_y, 0, &start_q, &start_r);
+        hex_grid_offset_to_axial(b_x, b_y, 0, &target_q, &target_r);
         units->unit_movement_points[unit_index_a] -=
             (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
         units->unit_movement_points[unit_index_b] -=
@@ -666,8 +722,8 @@ void unit_occupy_new_tile(Units *units, int unit_index, int previous_x, int prev
     units->unit_indices[unit_index * 2] = new_x;
     units->unit_indices[unit_index * 2 + 1] = new_y;
     int start_q, start_r, target_q, target_r;
-    hex_grid_offset_to_axial(previous_x, previous_y, &start_q, &start_r);
-    hex_grid_offset_to_axial(new_x, new_y, &target_q, &target_r);
+    hex_grid_offset_to_axial(previous_x, previous_y, 0, &start_q, &start_r);
+    hex_grid_offset_to_axial(new_x, new_y, 0, &target_q, &target_r);
     units->unit_movement_points[unit_index] -= (float)hex_grid_get_axial_distance(start_q, start_r, target_q, target_r);
 }
 
@@ -691,8 +747,13 @@ bool unit_animate_movement(Units *units)
     float end_x = (float)units->moves_list.array[2] * board_get_hex_tile_width() * 0.75f;
     float end_y = (float)units->moves_list.array[3] * board_get_hex_tile_height() +
                   (float)(units->moves_list.array[2] % 2) * board_get_hex_tile_height() / 2.0f;
-    float new_x = glm_lerp(start_x, end_x, units->unit_animation_progress);
-    float new_y = glm_lerp(start_y, end_y, units->unit_animation_progress);
+    float new_x = start_x;
+    float new_y = start_y;
+    if (units->unit_animation_progress >= 0.0f)
+    {
+        new_x = glm_lerp(start_x, end_x, units->unit_animation_progress);
+        new_y = glm_lerp(start_y, end_y, units->unit_animation_progress);
+    }
     units->unit_positions[unit_index * 12] = new_x + (board_get_hex_tile_width() - units->unit_size_x);
     units->unit_positions[unit_index * 12 + 1] = new_y + units->unit_size_y;
     units->unit_positions[unit_index * 12 + 2] = new_x + units->unit_size_x;
@@ -718,7 +779,7 @@ bool unit_animate_movement(Units *units)
         da_int_remove(&units->moves_list, 0);
         da_int_remove(&units->moves_list, 0);
         da_int_remove(&units->move_type, 0);
-        units->unit_animation_progress = 0.0f;
+        units->unit_animation_progress = -1.0f;
         return true;
     }
     // TODO: replace 0.05f with variable
@@ -820,9 +881,9 @@ int units_find_nearest_friendly(Units *units, int player_index, int x, int y, in
             continue;
         }
         int q, r;
-        hex_grid_offset_to_axial(x, y, &q, &r);
+        hex_grid_offset_to_axial(x, y, 0, &q, &r);
         int friend_q, friend_r;
-        hex_grid_offset_to_axial(units->unit_indices[i * 2], units->unit_indices[i * 2 + 1], &friend_q, &friend_r);
+        hex_grid_offset_to_axial(units->unit_indices[i * 2], units->unit_indices[i * 2 + 1], 0, &friend_q, &friend_r);
         int distance = hex_grid_get_axial_distance(q, r, friend_q, friend_r);
         if (distance < max_distance && (distance < min || min == -1))
         {
@@ -845,9 +906,9 @@ int units_find_nearest_enemy(Units *units, int player_index, int x, int y, int m
             continue;
         }
         int q, r;
-        hex_grid_offset_to_axial(x, y, &q, &r);
+        hex_grid_offset_to_axial(x, y, 0, &q, &r);
         int friend_q, friend_r;
-        hex_grid_offset_to_axial(units->unit_indices[i * 2], units->unit_indices[i * 2 + 1], &friend_q, &friend_r);
+        hex_grid_offset_to_axial(units->unit_indices[i * 2], units->unit_indices[i * 2 + 1], 0, &friend_q, &friend_r);
         int distance = hex_grid_get_axial_distance(q, r, friend_q, friend_r);
         if (distance < max_distance && (distance < min || min == -1))
         {
@@ -860,9 +921,13 @@ int units_find_nearest_enemy(Units *units, int player_index, int x, int y, int m
 
 void units_clear(Units *units)
 {
+    for (int i = 0; i < units->unit_buffer_size; i++)
+    {
+        string_free(&units->unit_name[i]);
+    }
     units->unit_buffer_size = 0;
     units->unit_update_flags = 0;
-    units->unit_animation_progress = 0.0f;
+    units->unit_animation_progress = -1.0f;
     free(units->unit_owner);
     units->unit_owner = NULL;
     free(units->unit_positions);
@@ -879,16 +944,29 @@ void units_clear(Units *units)
     units->unit_health_uvs = NULL;
     free(units->unit_health_colors);
     units->unit_health_colors = NULL;
+    free(units->unit_movement_points);
+    units->unit_movement_points = NULL;
     free(units->unit_tile_occupation_status);
     units->unit_tile_occupation_status = NULL;
     free(units->unit_tile_ownership_status);
     units->unit_tile_ownership_status = NULL;
+    free(units->unit_type);
+    units->unit_type = NULL;
     free(units->unit_indices);
     units->unit_indices = NULL;
+    free(units->unit_name);
+    units->unit_name = NULL;
+    da_int_free(&units->display_info_unit_index);
+    da_string_free(&units->unit_display_info);
+    da_float_free(&units->unit_display_info_time);
     da_int_free(&units->unit_freed_indices);
     da_int_free(&units->moves_unit_index);
     da_int_free(&units->moves_list);
     da_int_free(&units->move_type);
+    da_int_free(&units->current_status_unit_index);
+    da_int_free(&units->unit_current_status);
+    da_int_free(&units->unit_status_started);
+    da_int_free(&units->unit_remove_list);
 }
 
 void units_destroy(Units *units)

@@ -71,7 +71,21 @@ void board_handle_tile_click(Board *board);
 
 void board_update_hovered_tile(Board *board, float mouse_board_pos_x, float mouse_board_pos_y);
 
-void board_update_fill_vertices(Board *board);
+void board_clear_fill_vertices(Board *board);
+
+void board_update_hovered_tile_fill_vertices(Board *board);
+
+void board_update_moveable_unit_fill_vertices(Board *board);
+
+void board_update_moveable_tile_fill_vertices(Board *board);
+
+void board_update_attackable_tile_fill_vertices(Board *board);
+
+void board_update_swapable_tile_fill_vertices(Board *board);
+
+void board_update_selected_tile_fill_vertices(Board *board);
+
+void board_update_highlighted_path_fill_vertices(Board *board);
 
 void board_update_border(Board *board);
 

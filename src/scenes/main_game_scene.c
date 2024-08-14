@@ -5,11 +5,12 @@
 #include "main_game_scene.h"
 #include "../../external/nuklear/nuklear.h"
 #include "../objects/board.h"
-#include "../objects/planets_shader.h"
 #include "../objects/star_background.h"
+#include "../objects/text.h"
 #include "../platform/platform.h"
 #include "../players/players.h"
 #include "../renderer/camera.h"
+#include "../renderer/opengl_freetype_wrapper.h"
 #include "../renderer/opengl_renderer.h"
 #include "../renderer/opengl_shader.h"
 #include "../renderer/opengl_texture.h"
@@ -25,7 +26,6 @@
 static Board *g_current_board = NULL;
 static Players *g_players = NULL;
 static StarBackground *g_star_background = NULL;
-static PlanetsShader *g_planets_shader = NULL;
 
 static Shader g_board_outline_program = {0};
 static unsigned int g_board_outline_id = 0;
@@ -41,8 +41,6 @@ static Shader g_board_planet_program = {0};
 static unsigned int g_board_planet_id = 0;
 static Shader g_star_background_program = {0};
 static unsigned int g_star_background_id = 0;
-static Shader g_planet_shader_program = {0};
-static unsigned int g_planet_shader_id = 0;
 
 static Texture g_board_texture = {0};
 static Texture g_unit_texture = {0};
@@ -65,6 +63,8 @@ static int g_place_unit_type = -1;
 
 static int g_stash_x = -1;
 static int g_stash_y = -1;
+
+static TextData *g_text_data;
 
 #define SAVE_MAX_BUFFER_SIZE 4096
 
@@ -153,7 +153,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index != -1)
             {
@@ -177,7 +177,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index == -1)
             {
@@ -202,7 +202,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index != -1)
             {
@@ -222,14 +222,14 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
             if (g_current_board->selected_tile_index_x >= 0 && g_current_board->selected_tile_index_y >= 0)
             {
                 g_current_board->units->unit_tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                                   g_current_board->board_dimension_x +
+                                                                       g_current_board->board_dimension_x +
                                                                    g_current_board->selected_tile_index_x]++;
                 if (g_current_board->units->unit_tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                                       g_current_board->board_dimension_x +
+                                                                           g_current_board->board_dimension_x +
                                                                        g_current_board->selected_tile_index_x] > 4)
                 {
                     g_current_board->units->unit_tile_ownership_status[g_current_board->selected_tile_index_y *
-                                                                       g_current_board->board_dimension_x +
+                                                                           g_current_board->board_dimension_x +
                                                                        g_current_board->selected_tile_index_x] = 0;
                 }
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
@@ -254,7 +254,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
                 g_current_board, g_current_board->selected_tile_index_x, g_current_board->selected_tile_index_y,
                 g_current_board->mouse_tile_index_x, g_current_board->mouse_tile_index_y,
                 g_current_board->board_dimension_x, g_current_board->board_dimension_y);
-            board_update_fill_vertices(g_current_board);
+            board_update_highlighted_path_fill_vertices(g_current_board);
         }
         break;
     }
@@ -289,7 +289,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index == -1)
             {
@@ -310,7 +310,7 @@ void main_game_scene_glfw_key_callback(GLFWwindow *window, int key, int scancode
         {
             int unit_index =
                 g_current_board->units->unit_tile_occupation_status[g_current_board->mouse_tile_index_y *
-                                                                    g_current_board->board_dimension_x +
+                                                                        g_current_board->board_dimension_x +
                                                                     g_current_board->mouse_tile_index_x];
             if (unit_index == -1)
             {
@@ -360,9 +360,8 @@ void main_game_scene_glfw_mouse_button_callback(GLFWwindow *window, int button, 
         if (action == GLFW_PRESS)
         {
             camera_set_zoom(155.0f);
-            float board_width =
-                board_get_hex_tile_width() * g_current_board->board_dimension_x * 0.75 + board_get_hex_tile_width() /
-                4.0f;
+            float board_width = board_get_hex_tile_width() * g_current_board->board_dimension_x * 0.75 +
+                                board_get_hex_tile_width() / 4.0f;
             float board_height =
                 board_get_hex_tile_height() * g_current_board->board_dimension_y + board_get_hex_tile_height() / 2.0f;
 
@@ -372,9 +371,9 @@ void main_game_scene_glfw_mouse_button_callback(GLFWwindow *window, int button, 
                 (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
             vec3 position = {
                 ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - (float)camera_get_viewport_width()) -
-                ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
+                    ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
                 (float)camera_get_viewport_height() / camera_get_zoom_ratio() - (float)camera_get_viewport_height() -
-                ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
+                    ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
                 2.0f};
             camera_set_position(position);
 
@@ -765,13 +764,18 @@ void main_game_scene_reset_board()
 
 void main_game_scene_init()
 {
+    // TODO: look into getting better random
+    srand(time(NULL));
+
+    camera_set_viewport_width(platform_get_window_width());
+    camera_set_viewport_height(platform_get_window_height());
     platform_set_callbacks(main_game_scene_glfw_framebuffer_size_callback, main_game_scene_glfw_key_callback,
                            main_game_scene_glfw_cursor_position_callback, main_game_scene_glfw_mouse_button_callback,
                            main_game_scene_glfw_scroll_callback);
     g_star_background = star_background_create();
     g_players = players_create(MAX_PLAYERS, 1, NULL);
     g_pause = g_players->human_players_count == 0;
-    Board *board = board_create(13, 13, MAX_PLAYERS);
+    Board *board = board_create(19, 19, MAX_PLAYERS);
     g_board_outline_program =
         opengl_load_basic_shaders("../resources/shaders/board_outline.vert", "../resources/shaders/board_outline.frag");
     g_board_outline_id = basic_vertex_data_create(
@@ -813,13 +817,6 @@ void main_game_scene_init()
     g_star_background_id = basic_vertex_data_create(g_star_background->star_background_positions, 2, NULL,
                                                     g_star_background->star_background_colors, 6, NULL, 0, 0);
 
-    g_planets_shader = planets_shader_create(board->board_dimension_x, board->board_dimension_y);
-    g_planet_shader_program =
-        opengl_load_basic_shaders("../resources/shaders/planets.vert", "../resources/shaders/planets.frag");
-    g_planet_shader_id =
-        basic_vertex_data_create(g_planets_shader->planet_positions, 2, g_planets_shader->planet_uvs,
-                                 g_planets_shader->planet_colors, g_planets_shader->planet_buffer_size * 6, NULL, 0, 0);
-
     g_current_board = board;
 
     g_board_texture = generate_opengl_texture("../resources/textures/hex/hex_borders.png");
@@ -830,46 +827,24 @@ void main_game_scene_init()
 
     g_planet_texture = generate_opengl_texture("../resources/textures/planets/planets_v2.png");
 
-    camera_set_viewport_width(platform_get_window_width());
-    camera_set_viewport_height(platform_get_window_height());
-    camera_set_zoom(120.0f);
-    float board_width = board_get_hex_tile_width() * g_current_board->board_dimension_x * 0.75 +
-                        board_get_hex_tile_width() / 4.0f;
-    float board_height = board_get_hex_tile_height() * g_current_board->board_dimension_y + board_get_hex_tile_height()
-                         / 2.0f;
+    camera_set_zoom(155.0f);
+    float board_width = (float)board_get_hex_tile_width() * (float)g_current_board->board_dimension_x * 0.75f +
+                        (float)board_get_hex_tile_width() / 4.0f;
+    float board_height = (float)board_get_hex_tile_height() * (float)g_current_board->board_dimension_y +
+                         (float)board_get_hex_tile_height() / 2.0f;
 
     float left = (float)camera_get_viewport_width() - (float)camera_get_viewport_width() / camera_get_zoom_ratio();
     float top = (float)camera_get_viewport_height() - (float)camera_get_viewport_height() / camera_get_zoom_ratio();
     vec3 position = {
         ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - (float)camera_get_viewport_width()) -
-        ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
+            ((float)camera_get_viewport_width() / camera_get_zoom_ratio() - left - board_width) / 2.0f,
         (float)camera_get_viewport_height() / camera_get_zoom_ratio() - (float)camera_get_viewport_height() -
-        ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
+            ((float)camera_get_viewport_height() / camera_get_zoom_ratio() - top - board_height) / 2.0f,
         2.0f};
     camera_set_position(position);
-    /*vec2 max_position = {((float)camera_get_viewport_width() - board_width) / -2.0f,
-                         board_height / 2.0f - board_get_hex_tile_height() / 2.0f};
-    camera_set_max_position(max_position);
-    vec2 min_position = {((float)camera_get_viewport_width() - board_width) / -2.0f, 0.0f};
-    camera_set_min_position(min_position);*/
 
-    // TODO: look into getting better random
-    srand(time(NULL));
-
-    if (is_human_player(g_players, 0))
-    {
-        for (int i = 0; i < board->units->unit_buffer_size; i++)
-        {
-            if (board->units->unit_owner[i] == 1)
-            {
-                unit_replenish_movement(board->units, i);
-            }
-        }
-    }
-    else if (!g_pause)
-    {
-        //        player_start_turn(g_current_board, g_players, 0);
-    }
+    opengl_freetype_wrapper_load_font("../resources/fonts/HomeVideo/HomeVideo-BLG6G.ttf");
+    g_text_data = text_data_create();
 }
 
 void main_game_scene_update()
@@ -880,8 +855,37 @@ void main_game_scene_update()
         platform_set_window_should_close(true);
         return;
     }
+
     camera_update();
     main_game_scene_update_hovered_tile();
+
+    for (int i = 0; i < g_current_board->units->display_info_unit_index.used; i++)
+    {
+        int unit_index = g_current_board->units->display_info_unit_index.array[i];
+        float x = g_current_board->units->unit_positions[unit_index * 12] - BOARD_HEX_TILE_WIDTH / 2.0f;
+        float y = g_current_board->units->unit_positions[unit_index * 12 + 3];
+        char *text = string_to_c_str(&g_current_board->units->unit_display_info.array[i]);
+        float r, g;
+        if (text[0] == '-')
+        {
+            r = 1.0f;
+            g = 0.0f;
+        }
+        else
+        {
+            r = 0.0f;
+            g = 1.0f;
+        }
+        text_data_add(g_text_data, text, g_current_board->units->unit_display_info.array[i].used, x, y, 0.4f, r, g,
+                      0.0f, 1.0f, g_current_board->units->unit_display_info_time.array[i]);
+        free(text);
+    }
+    da_int_clear(&g_current_board->units->display_info_unit_index);
+    da_string_clear(&g_current_board->units->unit_display_info);
+    da_float_clear(&g_current_board->units->unit_display_info_time);
+
+    text_data_update(g_text_data);
+
     if (g_current_board->units->moves_unit_index.used != 0)
     {
         int unit_index = g_current_board->units->moves_unit_index.array[0];
@@ -891,10 +895,16 @@ void main_game_scene_update()
         int end_y = g_current_board->units->moves_list.array[3];
         int move_type = g_current_board->units->move_type.array[0];
 
+        if (is_human_player(g_players, g_current_board->board_current_turn % 4) &&
+            g_current_board->units->unit_animation_progress < 0.0f)
+        {
+            g_current_board->units->unit_animation_progress = 0.0f;
+        }
         if (unit_animate_movement(g_current_board->units))
         {
-            if (move_type == REGULAR)
+            switch (move_type)
             {
+            case REGULAR: {
                 DynamicIntArray *move_path =
                     hex_grid_find_path(g_current_board, start_x, start_y, end_x, end_y,
                                        g_current_board->board_dimension_x, g_current_board->board_dimension_y);
@@ -907,14 +917,14 @@ void main_game_scene_update()
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
                 da_int_free(move_path);
                 free(move_path);
+                break;
             }
-            else if (move_type == ATTACK)
-            {
+            case ATTACK: {
                 g_stash_x = start_x;
                 g_stash_y = start_y;
+                break;
             }
-            else if (move_type == RETREAT)
-            {
+            case RETREAT: {
                 DynamicIntArray *move_path =
                     hex_grid_find_path(g_current_board, g_stash_x, g_stash_y, end_x, end_y,
                                        g_current_board->board_dimension_x, g_current_board->board_dimension_y);
@@ -923,6 +933,10 @@ void main_game_scene_update()
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
                 da_int_free(move_path);
                 free(move_path);
+                break;
+            }
+            default:
+                break;
             }
         }
     }
@@ -971,7 +985,6 @@ void main_game_scene_render()
     opengl_shader_hot_reload(&g_board_borders_program);
     opengl_shader_hot_reload(&g_board_fill_program);
     opengl_shader_hot_reload(&g_star_background_program);
-    opengl_shader_hot_reload(&g_planet_shader_program);
 
     opengl_set_uniform_mat4(g_board_borders_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(g_board_borders_program.program, "projection", (vec4 *)camera_get_projection());
@@ -985,15 +998,26 @@ void main_game_scene_render()
     opengl_set_uniform_mat4(g_board_unit_health_bar_program.program, "projection", (vec4 *)camera_get_projection());
     opengl_set_uniform_mat4(g_board_planet_program.program, "view", (vec4 *)camera_get_view());
     opengl_set_uniform_mat4(g_board_planet_program.program, "projection", (vec4 *)camera_get_projection());
-    opengl_set_uniform_mat4(g_planet_shader_program.program, "view", (vec4 *)camera_get_view());
-    opengl_set_uniform_mat4(g_planet_shader_program.program, "projection", (vec4 *)camera_get_projection());
+    opengl_set_uniform_mat4(opengl_freetype_wrapper_get_font_shader()->program, "view", (vec4 *)camera_get_view());
+    opengl_set_uniform_mat4(opengl_freetype_wrapper_get_font_shader()->program, "projection",
+                            (vec4 *)camera_get_projection());
     static float time = 0.0f;
     time += 0.05f;
     opengl_set_uniform_float(g_star_background_program.program, "time", time);
 
     if (g_current_board->board_update_flags & BOARD_UPDATE_FILL)
     {
-        board_update_fill_vertices(g_current_board);
+        board_clear_fill_vertices(g_current_board);
+        board_update_hovered_tile_fill_vertices(g_current_board);
+        board_update_selected_tile_fill_vertices(g_current_board);
+        board_update_highlighted_path_fill_vertices(g_current_board);
+        if (is_human_player(g_players, g_current_board->board_current_turn % 4))
+        {
+            board_update_moveable_unit_fill_vertices(g_current_board);
+            board_update_moveable_tile_fill_vertices(g_current_board);
+            board_update_attackable_tile_fill_vertices(g_current_board);
+            board_update_swapable_tile_fill_vertices(g_current_board);
+        }
         basic_update_vertex_data(g_board_fill_id, g_current_board->board_fill_positions, NULL,
                                  g_current_board->board_fill_colors,
                                  g_current_board->board_dimension_x * g_current_board->board_dimension_y * 12);
@@ -1029,7 +1053,6 @@ void main_game_scene_render()
     basic_draw_arrays(g_board_fill_id, g_board_fill_program.program, GL_TRIANGLES);
     basic_draw_arrays(g_board_borders_id, g_board_borders_program.program, GL_TRIANGLES);
 
-    // basic_draw_arrays(g_planet_shader_id, g_planet_shader_program.program, GL_TRIANGLES);
     // glBindTexture(GL_TEXTURE_2D, g_planet_texture.id);
     basic_draw_arrays(g_board_planet_id, g_board_planet_program.program, GL_TRIANGLES);
     glBindTexture(GL_TEXTURE_2D, g_unit_texture.id);
@@ -1039,6 +1062,7 @@ void main_game_scene_render()
     g_current_board->board_update_flags = 0;
     g_current_board->units->unit_update_flags = 0;
     g_current_board->planets->planet_update_flags = 0;
+    text_data_render(g_text_data);
     omega_nuklear_start();
     struct nk_context *ctx = omega_nuklear_get_nuklear_context();
     if (nk_begin(ctx, "Menu Bar", nk_rect(0.0f, 0.0f, (float)camera_get_viewport_width(), 28.0f),
@@ -1110,6 +1134,12 @@ void main_game_scene_render()
         sprintf(board_current_tile_buffer, "Tile: %d, %d", g_current_board->mouse_tile_index_x,
                 g_current_board->mouse_tile_index_y);
         nk_label(ctx, board_current_tile_buffer, NK_TEXT_LEFT);
+        int q, r;
+        hex_grid_offset_to_axial(g_current_board->mouse_tile_index_x - g_current_board->board_dimension_x / 2,
+                                 g_current_board->mouse_tile_index_y - g_current_board->board_dimension_y / 2, 0, &q,
+                                 &r);
+        sprintf(board_current_tile_buffer, "Tile q,r: %d, %d", q, r);
+        nk_label(ctx, board_current_tile_buffer, NK_TEXT_LEFT);
     }
     nk_end(ctx);
     if (nk_begin(ctx, "Tile Actions",
@@ -1126,19 +1156,19 @@ void main_game_scene_render()
             {
                 selected_unit =
                     g_current_board->units->unit_tile_occupation_status[g_current_board->selected_tile_index_y *
-                                                                        g_current_board->board_dimension_x +
+                                                                            g_current_board->board_dimension_x +
                                                                         g_current_board->selected_tile_index_x];
             }
             else
             {
                 selected_unit =
                     g_current_board->units->unit_tile_occupation_status[g_current_board->last_selected_tile_index_y *
-                                                                        g_current_board->board_dimension_x +
+                                                                            g_current_board->board_dimension_x +
                                                                         g_current_board->last_selected_tile_index_x];
             }
             if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == WORKER &&
                 g_current_board->units->unit_owner[selected_unit] ==
-                g_current_board->board_current_turn % g_players->player_count + 1)
+                    g_current_board->board_current_turn % g_players->player_count + 1)
             {
                 if (unit_doing_action(g_current_board->units, selected_unit, UNIT_BUILD_STATION))
                 {
@@ -1156,7 +1186,7 @@ void main_game_scene_render()
             }
             if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION &&
                 g_current_board->units->unit_owner[selected_unit] ==
-                g_current_board->board_current_turn % g_players->player_count + 1 &&
+                    g_current_board->board_current_turn % g_players->player_count + 1 &&
                 nk_button_label(ctx, "Create Worker"))
             {
                 board_highlight_possible_unit_placement(g_current_board, selected_unit,
@@ -1166,7 +1196,7 @@ void main_game_scene_render()
             }
             if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION &&
                 g_current_board->units->unit_owner[selected_unit] ==
-                g_current_board->board_current_turn % g_players->player_count + 1 &&
+                    g_current_board->board_current_turn % g_players->player_count + 1 &&
                 nk_button_label(ctx, "Create Droid"))
             {
                 board_highlight_possible_unit_placement(g_current_board, selected_unit,
@@ -1176,7 +1206,7 @@ void main_game_scene_render()
             }
             if (selected_unit != -1 && g_current_board->units->unit_type[selected_unit] == STATION &&
                 g_current_board->units->unit_owner[selected_unit] ==
-                g_current_board->board_current_turn % g_players->player_count + 1 &&
+                    g_current_board->board_current_turn % g_players->player_count + 1 &&
                 nk_button_label(ctx, "Create Battleship"))
             {
                 board_highlight_possible_unit_placement(g_current_board, selected_unit,
@@ -1212,9 +1242,8 @@ void main_game_scene_render()
         nk_layout_row_static(ctx, 8, 250, 1);
         char buffer[30];
         sprintf(buffer, "Turn %d",
-                g_current_board->player_count != 0
-                    ? g_current_board->board_current_turn / g_current_board->player_count
-                    : 0);
+                g_current_board->player_count != 0 ? g_current_board->board_current_turn / g_current_board->player_count
+                                                   : 0);
         nk_label(ctx, buffer, NK_TEXT_LEFT);
         for (int i = 0; i < g_players->player_count; i++)
         {
@@ -1236,4 +1265,6 @@ void main_game_scene_clean()
     g_current_board = NULL;
     players_destroy(g_players);
     g_players = NULL;
+    text_data_destroy(g_text_data);
+    g_text_data = NULL;
 }

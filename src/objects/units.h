@@ -10,6 +10,7 @@
 
 #define UNIT_UPDATE 0x1
 #define UNIT_UPDATE_HEALTH 0x2
+#define UNIT_TEXT_INFO_UPDATE 0x4
 
 #define TOTAL_UNIT_TYPES 4
 
@@ -77,6 +78,11 @@ typedef struct Units
 
     int *unit_indices;
 
+    String *unit_name;
+    DynamicIntArray display_info_unit_index;
+    DynamicStringArray unit_display_info;
+    DynamicFloatArray unit_display_info_time;
+
     DynamicIntArray unit_freed_indices;
 
     DynamicIntArray moves_unit_index;
@@ -86,6 +92,9 @@ typedef struct Units
     DynamicIntArray current_status_unit_index;
     DynamicIntArray unit_current_status;
     DynamicIntArray unit_status_started;
+
+    DynamicIntArray unit_remove_list;
+
 } Units;
 
 Units *units_create(int board_dimension_x, int board_dimension_y);

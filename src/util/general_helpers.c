@@ -31,7 +31,7 @@ void realloc_int(int **int_ptr, size_t size)
     int *temp_int_ptr = realloc(*int_ptr, size * sizeof(int));
     if (temp_int_ptr == NULL)
     {
-        printf("Error reallocating memory for board_unit_owner\n");
+        printf("Error reallocating memory for int_ptr\n");
         return;
     }
     *int_ptr = temp_int_ptr;
@@ -42,10 +42,21 @@ void realloc_float(float **float_ptr, size_t size)
     float *temp_float_ptr = realloc(*float_ptr, size * sizeof(float));
     if (temp_float_ptr == NULL)
     {
-        printf("Error reallocating memory for board_unit_owner\n");
+        printf("Error reallocating memory for float_ptr\n");
         return;
     }
     *float_ptr = temp_float_ptr;
+}
+
+void realloc_string(String **str_ptr, size_t size)
+{
+    String *temp_str_ptr = realloc(*str_ptr, size * sizeof(String));
+    if (temp_str_ptr == NULL)
+    {
+        printf("Error reallocating memory for str_ptr\n");
+        return;
+    }
+    *str_ptr = temp_str_ptr;
 }
 
 int max_int(int a, int b)
@@ -53,16 +64,32 @@ int max_int(int a, int b)
     return a > b ? a : b;
 }
 
-void hex_grid_axial_to_offset(int q, int r, int *x, int *y)
+void hex_grid_axial_to_offset(int q, int r, int center_y, int *x, int *y)
 {
     *x = q;
-    *y = r + (q - (q & 1)) / 2;
+    // for odd grid dimensions
+    if (center_y % 2 == 0)
+    {
+        *y = r + (q - (q & 1)) / 2;
+    }
+    else
+    {
+        *y = r + (q + (q & 1)) / 2;
+    }
 }
 
-void hex_grid_offset_to_axial(int x, int y, int *q, int *r)
+void hex_grid_offset_to_axial(int x, int y, int center_y, int *q, int *r)
 {
     *q = x;
-    *r = y - (x - (x & 1)) / 2;
+    // for odd grid dimensions
+    if (center_y % 2 == 0)
+    {
+        *r = y - (x - (x & 1)) / 2;
+    }
+    else
+    {
+        *r = y - (x + (x & 1)) / 2;
+    }
 }
 
 int hex_grid_get_axial_distance(int start_q, int start_r, int target_q, int target_r)
@@ -117,6 +144,18 @@ void hex_grid_rotation_get_next(bool clockwise, int distance_from_center, int *q
     }
 }
 
+void hex_grid_get_random_position(int distance_from_center, int center_y, int *x, int *y)
+{
+    int rand_num = rand() % distance_from_center * 6;
+    int q = 0;
+    int r = -distance_from_center;
+    for (int i = 0; i < rand_num; i++)
+    {
+        hex_grid_rotation_get_next(false, distance_from_center, &q, &r);
+    }
+    hex_grid_axial_to_offset(q, r, center_y, x, y);
+}
+
 DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int target_x, int target_y,
                                     int board_dimension_x, int board_dimension_y)
 {
@@ -134,7 +173,7 @@ DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int 
     for (int i = 0; i < board_dimension_x * board_dimension_y; i++)
     {
         int q, r;
-        hex_grid_offset_to_axial(i % board_dimension_x, i / board_dimension_x, &q, &r);
+        hex_grid_offset_to_axial(i % board_dimension_x, i / board_dimension_x, 0, &q, &r);
         all_nodes[i].position.q = q;
         all_nodes[i].position.r = r;
         all_nodes[i].parent = NULL;
@@ -143,7 +182,7 @@ DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int 
             int new_q = all_nodes[i].position.q + g_directions[j][0];
             int new_r = all_nodes[i].position.r + g_directions[j][1];
             int x, y;
-            hex_grid_axial_to_offset(new_q, new_r, &x, &y);
+            hex_grid_axial_to_offset(new_q, new_r, 0, &x, &y);
             if (x < 0 || x >= board_dimension_x || y < 0 || y >= board_dimension_y)
             {
                 all_nodes[i].neighbors[j] = NULL;
@@ -219,7 +258,7 @@ DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int 
                     current_path_tile->position.r != all_nodes[start_y * board_dimension_x + start_x].position.r))
             {
                 int x, y;
-                hex_grid_axial_to_offset(current_path_tile->position.q, current_path_tile->position.r, &x, &y);
+                hex_grid_axial_to_offset(current_path_tile->position.q, current_path_tile->position.r, 0, &x, &y);
                 path[count * 2] = x;
                 path[count * 2 + 1] = y;
                 current_path_tile = current_path_tile->parent;
@@ -259,7 +298,7 @@ DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int 
                 continue;
             }
             int x, y;
-            hex_grid_axial_to_offset(current->neighbors[i]->position.q, current->neighbors[i]->position.r, &x, &y);
+            hex_grid_axial_to_offset(current->neighbors[i]->position.q, current->neighbors[i]->position.r, 0, &x, &y);
             // TODO: check if valid tile (unit in the way, non-passable tile, etc...)
             if (board_tile_is_occupied(board, x, y) && (x != target_x || y != target_y))
             {
@@ -310,7 +349,7 @@ DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int 
                 if (!in_to_search)
                 {
                     int target_q, target_r;
-                    hex_grid_offset_to_axial(target_x, target_y, &target_q, &target_r);
+                    hex_grid_offset_to_axial(target_x, target_y, 0, &target_q, &target_r);
                     current->neighbors[i]->h = hex_grid_get_axial_distance(
                         current->neighbors[i]->position.q, current->neighbors[i]->position.r, target_q, target_r);
                     to_search[to_search_count++] = current->neighbors[i];
@@ -330,7 +369,7 @@ DynamicIntArray *hex_grid_find_path(Board *board, int start_x, int start_y, int 
 Node *hex_grid_tile_fill_neighbors(Board *board, int q, int r, float movement_points)
 {
     int x, y;
-    hex_grid_axial_to_offset(q, r, &x, &y);
+    hex_grid_axial_to_offset(q, r, 0, &x, &y);
     if (movement_points < 0.0f || board_tile_is_occupied(board, x, y))
     {
         return NULL;
@@ -354,7 +393,7 @@ void hex_grid_fill_possible_tiles(DynamicIntArray *possible_tiles, Node *node)
         return;
     }
     int x, y;
-    hex_grid_axial_to_offset(node->position.q, node->position.r, &x, &y);
+    hex_grid_axial_to_offset(node->position.q, node->position.r, 0, &x, &y);
     bool in_possible_tiles = false;
     for (int i = 0; i < possible_tiles->used; i += 2)
     {
@@ -399,7 +438,7 @@ DynamicIntArray *hex_grid_possible_moves(Board *board, int unit_index, int unit_
     da_int_init(possible_tiles, 36);
 
     int start_q, start_r;
-    hex_grid_offset_to_axial(unit_x, unit_y, &start_q, &start_r);
+    hex_grid_offset_to_axial(unit_x, unit_y, 0, &start_q, &start_r);
 
     float initial_movement_points =
         board->units->unit_type[unit_index] != STATION ? board->units->unit_movement_points[unit_index] : 2.0f;
@@ -422,7 +461,7 @@ DynamicIntArray *hex_grid_possible_moves(Board *board, int unit_index, int unit_
 Node *hex_grid_tile_fill_neighbors_include_enemies(Board *board, int unit_index, int q, int r, float movement_points)
 {
     int x, y;
-    hex_grid_axial_to_offset(q, r, &x, &y);
+    hex_grid_axial_to_offset(q, r, 0, &x, &y);
     if (movement_points < 0.0f || x < 0 || x >= board->board_dimension_x || y < 0 || y >= board->board_dimension_y)
     {
         return NULL;
@@ -461,7 +500,7 @@ void hex_grid_fill_attackable_tiles(Board *board, int unit_index, DynamicIntArra
         return;
     }
     int x, y;
-    hex_grid_axial_to_offset(node->position.q, node->position.r, &x, &y);
+    hex_grid_axial_to_offset(node->position.q, node->position.r, 0, &x, &y);
     bool in_possible_tiles = false;
     for (int i = 0; i < possible_tiles->used; i += 2)
     {
@@ -495,7 +534,7 @@ DynamicIntArray *hex_grid_possible_attacks(Board *board, int unit_index, int uni
     da_int_init(possible_tiles, 10);
 
     int start_q, start_r;
-    hex_grid_offset_to_axial(unit_x, unit_y, &start_q, &start_r);
+    hex_grid_offset_to_axial(unit_x, unit_y, 0, &start_q, &start_r);
 
     Node *neighbors[6];
     for (int i = 0; i < 6; i++)
@@ -516,7 +555,7 @@ DynamicIntArray *hex_grid_possible_attacks(Board *board, int unit_index, int uni
 Node *hex_grid_tile_fill_neighbors_all(Board *board, int q, int r, float movement_points)
 {
     int x, y;
-    hex_grid_axial_to_offset(q, r, &x, &y);
+    hex_grid_axial_to_offset(q, r, 0, &x, &y);
     if (movement_points < 0.0f || !board_tile_in_bounds(board, x, y))
     {
         return NULL;
@@ -540,7 +579,7 @@ void hex_grid_fill_swapable_tiles(Board *board, int unit_index, DynamicIntArray 
         return;
     }
     int x, y;
-    hex_grid_axial_to_offset(node->position.q, node->position.r, &x, &y);
+    hex_grid_axial_to_offset(node->position.q, node->position.r, 0, &x, &y);
     bool in_possible_tiles = false;
     for (int i = 0; i < possible_tiles->used; i += 2)
     {
@@ -550,9 +589,9 @@ void hex_grid_fill_swapable_tiles(Board *board, int unit_index, DynamicIntArray 
         }
     }
     int current_tile_unit_index = board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
-    if (!in_possible_tiles && current_tile_unit_index != -1 && board->units->unit_movement_points[
-            current_tile_unit_index] >= 1.0f && board->units->unit_owner[unit_index] == board->units->unit_owner[
-            current_tile_unit_index])
+    if (!in_possible_tiles && current_tile_unit_index != -1 &&
+        board->units->unit_movement_points[current_tile_unit_index] >= 1.0f &&
+        board->units->unit_owner[unit_index] == board->units->unit_owner[current_tile_unit_index])
     {
         da_int_push_back(possible_tiles, x);
         da_int_push_back(possible_tiles, y);
@@ -574,14 +613,14 @@ DynamicIntArray *hex_grid_possible_swaps(Board *board, int unit_index, int unit_
     da_int_init(possible_tiles, 1);
 
     int start_q, start_r;
-    hex_grid_offset_to_axial(unit_x, unit_y, &start_q, &start_r);
+    hex_grid_offset_to_axial(unit_x, unit_y, 0, &start_q, &start_r);
 
     Node *neighbors[6];
     for (int i = 0; i < 6; i++)
     {
-        neighbors[i] = hex_grid_tile_fill_neighbors_all(
-            board, start_q + g_directions[i][0], start_r + g_directions[i][1],
-            board->units->unit_movement_points[unit_index] - 1.0f);
+        neighbors[i] =
+            hex_grid_tile_fill_neighbors_all(board, start_q + g_directions[i][0], start_r + g_directions[i][1],
+                                             board->units->unit_movement_points[unit_index] - 1.0f);
     }
 
     for (int i = 0; i < 6; i++)

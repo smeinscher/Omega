@@ -50,16 +50,15 @@ float *board_vertices_create(int dimension_x, int dimension_y, int board_offset_
         for (int j = 0; j < dimension_x; j++)
         {
             const float y_offset = (float)(j % 2) * board_get_hex_tile_height() / 2.0f;
-            board_vertices[index++] =
-                (float)board_offset_x + (float)j * 3.0f * board_get_hex_tile_width() / 4.0f + board_get_hex_tile_width()
-                / 4.0f;
+            board_vertices[index++] = (float)board_offset_x + (float)j * 3.0f * board_get_hex_tile_width() / 4.0f +
+                                      board_get_hex_tile_width() / 4.0f;
             board_vertices[index++] = (float)board_offset_y + (float)i * board_get_hex_tile_height() + y_offset;
             board_vertices[index++] = (float)board_offset_x + (float)j * 3.0f * board_get_hex_tile_width() / 4.0f +
                                       3.0f * board_get_hex_tile_width() / 4.0f;
             board_vertices[index++] = (float)board_offset_y + (float)i * board_get_hex_tile_height() + y_offset;
         }
-        board_vertices[index++] = (float)board_offset_x + (float)dimension_x * 3.0f * board_get_hex_tile_width() / 4.0f
-                                  +
+        board_vertices[index++] = (float)board_offset_x +
+                                  (float)dimension_x * 3.0f * board_get_hex_tile_width() / 4.0f +
                                   board_get_hex_tile_width() / 4.0f;
         board_vertices[index++] = (float)board_offset_y + (float)i * board_get_hex_tile_height() +
                                   board_get_hex_tile_height() / (1.0f + (float)(dimension_x % 2));
@@ -70,13 +69,11 @@ float *board_vertices_create(int dimension_x, int dimension_y, int board_offset_
     for (int j = 0; j < dimension_x; j++)
     {
         const float y_offset = (float)(j % 2) * board_get_hex_tile_height() / 2.0f;
-        board_vertices[index++] =
-            (float)board_offset_x + (float)(j) * 3.0f * board_get_hex_tile_width() / 4.0f + board_get_hex_tile_width() /
-            4.0f;
+        board_vertices[index++] = (float)board_offset_x + (float)(j) * 3.0f * board_get_hex_tile_width() / 4.0f +
+                                  board_get_hex_tile_width() / 4.0f;
         board_vertices[index++] = (float)board_offset_y + (float)dimension_y * board_get_hex_tile_height() + y_offset;
-        board_vertices[index++] =
-            (float)board_offset_x + (float)j * 3.0f * board_get_hex_tile_width() / 4.0f + 3.0f *
-            board_get_hex_tile_width() / 4.0f;
+        board_vertices[index++] = (float)board_offset_x + (float)j * 3.0f * board_get_hex_tile_width() / 4.0f +
+                                  3.0f * board_get_hex_tile_width() / 4.0f;
         board_vertices[index++] = (float)board_offset_y + (float)dimension_y * board_get_hex_tile_height() + y_offset;
     }
     return board_vertices;
@@ -148,9 +145,9 @@ unsigned int *board_outline_indices_create(int dimension_x, int dimension_y)
 void board_set_tile_border_vertices(Board *board, int x, int y, int border_type, int start_index)
 {
     board->board_border_positions[start_index] = (float)x * board_get_hex_tile_width() * 0.75f;
-    board->board_border_positions[start_index + 1] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f +
-        board_get_hex_tile_height();
+    board->board_border_positions[start_index + 1] = (float)y * board_get_hex_tile_height() +
+                                                     (float)(x % 2) * board_get_hex_tile_height() / 2.0f +
+                                                     board_get_hex_tile_height();
     board->board_border_positions[start_index + 2] =
         (float)x * board_get_hex_tile_width() * 0.75f + board_get_hex_tile_width();
     board->board_border_positions[start_index + 3] =
@@ -159,18 +156,18 @@ void board_set_tile_border_vertices(Board *board, int x, int y, int border_type,
     board->board_border_positions[start_index + 5] =
         (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f;
     board->board_border_positions[start_index + 6] = (float)x * board_get_hex_tile_width() * 0.75f;
-    board->board_border_positions[start_index + 7] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f +
-        board_get_hex_tile_height();
+    board->board_border_positions[start_index + 7] = (float)y * board_get_hex_tile_height() +
+                                                     (float)(x % 2) * board_get_hex_tile_height() / 2.0f +
+                                                     board_get_hex_tile_height();
     board->board_border_positions[start_index + 8] =
         (float)x * board_get_hex_tile_width() * 0.75f + board_get_hex_tile_width();
     board->board_border_positions[start_index + 9] =
         (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f;
     board->board_border_positions[start_index + 10] =
         (float)x * board_get_hex_tile_width() * 0.75f + board_get_hex_tile_width();
-    board->board_border_positions[start_index + 11] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f +
-        board_get_hex_tile_height();
+    board->board_border_positions[start_index + 11] = (float)y * board_get_hex_tile_height() +
+                                                      (float)(x % 2) * board_get_hex_tile_height() / 2.0f +
+                                                      board_get_hex_tile_height();
 
     board->board_border_uvs[start_index] = (float)border_type / 6.0f;
     board->board_border_uvs[start_index + 1] = 1.0f;
@@ -331,7 +328,8 @@ Board *board_create(int dimension_x, int dimension_y, int player_count)
 
     board_update_border(board);
 
-    board->planets = planets_create(board->board_dimension_x, board->board_dimension_y);
+    // TODO: account for possibility that dimension_x could be greater than dimension_y, implement min_int
+    board->planets = planets_create(board->board_dimension_x, board->board_dimension_y, dimension_x / 2 - 2);
     if (board->planets == NULL)
     {
         printf("Error creating planets\n");
@@ -470,8 +468,8 @@ void board_handle_tile_click(Board *board)
 
         da_int_free(board->board_swapable_tiles);
         free(board->board_swapable_tiles);
-        board->board_swapable_tiles = hex_grid_possible_swaps(board, unit_index, board->mouse_tile_index_x,
-                                                              board->mouse_tile_index_y);
+        board->board_swapable_tiles =
+            hex_grid_possible_swaps(board, unit_index, board->mouse_tile_index_x, board->mouse_tile_index_y);
     }
     else
     {
@@ -532,10 +530,10 @@ void board_update_hovered_tile(Board *board, float mouse_board_pos_x, float mous
 {
     board->board_update_flags |= BOARD_UPDATE_FILL;
 
-    float board_width = (float)board->board_dimension_x * board_get_hex_tile_width() * 0.75f +
-                        board_get_hex_tile_width() / 4.0f;
-    float board_height = (float)board->board_dimension_y * board_get_hex_tile_height() + board_get_hex_tile_height() /
-                         2.0f;
+    float board_width =
+        (float)board->board_dimension_x * board_get_hex_tile_width() * 0.75f + board_get_hex_tile_width() / 4.0f;
+    float board_height =
+        (float)board->board_dimension_y * board_get_hex_tile_height() + board_get_hex_tile_height() / 2.0f;
     if (mouse_board_pos_x < 0 || mouse_board_pos_x > board_width || mouse_board_pos_y < 0 ||
         mouse_board_pos_y > board_height)
     {
@@ -631,11 +629,15 @@ void board_add_fill_colors(float *board_fill_colors, int board_colors_index, flo
     }
 }
 
-void board_update_fill_vertices(Board *board)
+void board_clear_fill_vertices(Board *board)
 {
     memset(board->board_fill_positions, 0,
            sizeof(float) * 12 * board->board_dimension_x * board->board_dimension_y * 2);
     memset(board->board_fill_colors, 0, sizeof(float) * 12 * board->board_dimension_x * board->board_dimension_y * 4);
+}
+
+void board_update_hovered_tile_fill_vertices(Board *board)
+{
     if (board->mouse_tile_index_x >= 0 && board->mouse_tile_index_x < board->board_dimension_x &&
         board->mouse_tile_index_y >= 0 && board->mouse_tile_index_y < board->board_dimension_y)
     {
@@ -648,6 +650,10 @@ void board_update_fill_vertices(Board *board)
         board_add_fill_colors(board->board_fill_colors, hovered_tile_index * 4, hovered_tile_color[0],
                               hovered_tile_color[1], hovered_tile_color[2], hovered_tile_color[3]);
     }
+}
+
+void board_update_moveable_unit_fill_vertices(Board *board)
+{
     for (int i = 0; i < board->board_dimension_x * board->board_dimension_y; i++)
     {
         int unit_index = board->units->unit_tile_occupation_status[i];
@@ -667,59 +673,41 @@ void board_update_fill_vertices(Board *board)
             }
         }
     }
+}
+
+void board_update_moveable_tile_fill_vertices(Board *board)
+{
     float mod_r, mod_g, mod_b, mod_a;
-    if (board->board_moveable_tiles != NULL)
+    for (int i = 0; i < board->board_moveable_tiles->used; i += 2)
     {
-        for (int i = 0; i < board->board_moveable_tiles->used; i += 2)
+        int x = board->board_moveable_tiles->array[i];
+        int y = board->board_moveable_tiles->array[i + 1];
+        int highlighted_tile_index = (y * board->board_dimension_x + x) * 12;
+        board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, highlighted_tile_index * 2,
+                                coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
+                                board->board_dimension_x, board->board_dimension_y);
+        mod_r = 1.0f;
+        mod_g = 1.0f;
+        mod_b = 1.0f;
+        mod_a = highlighted_tile_color[3];
+        if (board->mouse_tile_index_x == x && board->mouse_tile_index_y == y)
         {
-            int x = board->board_moveable_tiles->array[i];
-            int y = board->board_moveable_tiles->array[i + 1];
-            int highlighted_tile_index = (y * board->board_dimension_x + x) * 12;
-            board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions,
-                                    highlighted_tile_index * 2,
-                                    coords_to_point(x, y, board->board_dimension_x, board->board_dimension_y),
-                                    board->board_dimension_x, board->board_dimension_y);
-            mod_r = 1.0f;
-            mod_g = 1.0f;
-            mod_b = 1.0f;
-            mod_a = highlighted_tile_color[3];
-            if (board->mouse_tile_index_x == x && board->mouse_tile_index_y == y)
-            {
-                mod_r = hovered_tile_color[0];
-                mod_g = hovered_tile_color[1];
-                mod_b = hovered_tile_color[2];
-                mod_a = hovered_tile_color[3];
-            }
-            board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4,
-                                  highlighted_tile_color[0] * mod_r, highlighted_tile_color[1] * mod_g,
-                                  highlighted_tile_color[2] * mod_b, mod_a);
+            mod_r = hovered_tile_color[0];
+            mod_g = hovered_tile_color[1];
+            mod_b = hovered_tile_color[2];
+            mod_a = hovered_tile_color[3];
         }
+        board_add_fill_colors(board->board_fill_colors, highlighted_tile_index * 4, highlighted_tile_color[0] * mod_r,
+                              highlighted_tile_color[1] * mod_g, highlighted_tile_color[2] * mod_b, mod_a);
     }
-    if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
-        board->selected_tile_index_y < 0 || board->selected_tile_index_y >= board->board_dimension_y)
-    {
-        return;
-    }
-    mod_r = 1.0f;
-    mod_g = 1.0f;
-    mod_b = 1.0f;
-    mod_a = selected_tile_color[3];
-    int selected_tile_index =
-        (board->selected_tile_index_y * board->board_dimension_x + board->selected_tile_index_x) * 12;
-    board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, selected_tile_index * 2,
-                            coords_to_point(board->selected_tile_index_x, board->selected_tile_index_y,
-                                            board->board_dimension_x, board->board_dimension_y),
-                            board->board_dimension_x, board->board_dimension_y);
-    if (board->mouse_tile_index_x == board->selected_tile_index_x &&
-        board->mouse_tile_index_y == board->selected_tile_index_y)
-    {
-        mod_r = hovered_tile_color[0];
-        mod_g = hovered_tile_color[1];
-        mod_b = hovered_tile_color[2];
-        mod_a = hovered_tile_color[3];
-    }
-    board_add_fill_colors(board->board_fill_colors, selected_tile_index * 4, selected_tile_color[0] * mod_r,
-                          selected_tile_color[1] * mod_g, selected_tile_color[2] * mod_b, mod_a);
+}
+
+void board_update_attackable_tile_fill_vertices(Board *board)
+{
+    float mod_r;
+    float mod_g;
+    float mod_b;
+    float mod_a;
     for (int i = 0; i < board->board_attackable_tiles->used; i += 2)
     {
         int x = board->board_attackable_tiles->array[i];
@@ -743,7 +731,14 @@ void board_update_fill_vertices(Board *board)
                               highlighted_tile_occupied_color[0] * mod_r, highlighted_tile_occupied_color[1] * mod_g,
                               highlighted_tile_occupied_color[2] * mod_b, highlighted_tile_occupied_color[3]);
     }
+}
 
+void board_update_swapable_tile_fill_vertices(Board *board)
+{
+    float mod_r;
+    float mod_g;
+    float mod_b;
+    float mod_a;
     for (int i = 0; i < board->board_swapable_tiles->used; i += 2)
     {
         int x = board->board_swapable_tiles->array[i];
@@ -767,7 +762,40 @@ void board_update_fill_vertices(Board *board)
                               highlighted_tile_friendly_color[0] * mod_r, highlighted_tile_friendly_color[1] * mod_g,
                               highlighted_tile_friendly_color[2] * mod_b, highlighted_tile_friendly_color[3]);
     }
+}
 
+void board_update_selected_tile_fill_vertices(Board *board)
+{
+    if (board->selected_tile_index_x < 0 || board->selected_tile_index_x >= board->board_dimension_x ||
+        board->selected_tile_index_y < 0 || board->selected_tile_index_y >= board->board_dimension_y)
+    {
+        return;
+    }
+    float mod_r, mod_g, mod_b, mod_a;
+    mod_r = 1.0f;
+    mod_g = 1.0f;
+    mod_b = 1.0f;
+    mod_a = selected_tile_color[3];
+    int selected_tile_index =
+        (board->selected_tile_index_y * board->board_dimension_x + board->selected_tile_index_x) * 12;
+    board_add_fill_vertices(board->board_outline_vertices, board->board_fill_positions, selected_tile_index * 2,
+                            coords_to_point(board->selected_tile_index_x, board->selected_tile_index_y,
+                                            board->board_dimension_x, board->board_dimension_y),
+                            board->board_dimension_x, board->board_dimension_y);
+    if (board->mouse_tile_index_x == board->selected_tile_index_x &&
+        board->mouse_tile_index_y == board->selected_tile_index_y)
+    {
+        mod_r = hovered_tile_color[0];
+        mod_g = hovered_tile_color[1];
+        mod_b = hovered_tile_color[2];
+        mod_a = hovered_tile_color[3];
+    }
+    board_add_fill_colors(board->board_fill_colors, selected_tile_index * 4, selected_tile_color[0] * mod_r,
+                          selected_tile_color[1] * mod_g, selected_tile_color[2] * mod_b, mod_a);
+}
+
+void board_update_highlighted_path_fill_vertices(Board *board)
+{
     if (board->board_highlighted_path != NULL)
     {
         for (int i = 0; i < board->board_highlighted_path->used; i += 2)
@@ -785,7 +813,6 @@ void board_update_fill_vertices(Board *board)
         }
     }
 }
-
 void board_update_border(Board *board)
 {
     int dimension_x = board->board_dimension_x;
@@ -891,9 +918,9 @@ void board_process_planet_orbit(Board *board)
                 relative_x = x - board->planets->planet_tile_indices[0];
                 relative_y = y - board->planets->planet_tile_indices[1];
                 int q, r;
-                hex_grid_offset_to_axial(relative_x, relative_y, &q, &r);
+                hex_grid_offset_to_axial(relative_x, relative_y, board->planets->planet_tile_indices[1], &q, &r);
                 hex_grid_rotation_get_next(false, board->planets->planet_distance_from_sun[i], &q, &r);
-                hex_grid_axial_to_offset(q, r, &relative_x, &relative_y);
+                hex_grid_axial_to_offset(q, r, board->planets->planet_tile_indices[1], &relative_x, &relative_y);
                 int new_x = board->planets->planet_tile_indices[0] + relative_x;
                 int new_y = board->planets->planet_tile_indices[1] + relative_y;
                 int next_tile_unit_index =
@@ -944,6 +971,7 @@ BattleResult board_process_attack(Board *board, int defender_index, int attacker
         if (board->units->unit_type[defender_index] != STATION)
         {
             unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
+            //            da_int_push_back(&board->units->unit_remove_list, defender_index);
             unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, REGULAR);
             unit_occupy_new_tile(board->units, attacker_index, start_x, start_y, move_x, move_y,
                                  board->board_dimension_x);
@@ -962,12 +990,15 @@ BattleResult board_process_attack(Board *board, int defender_index, int attacker
     case ATTACKER_DESTROYED: {
         unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
                     board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
+        //        da_int_push_back(&board->units->unit_remove_list, attacker_index);
         return ATTACKER_DESTROYED;
     }
     case BOTH_DESTROYED: {
         unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
         unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
                     board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
+        //        da_int_push_back(&board->units->unit_remove_list, defender_index);
+        //        da_int_push_back(&board->units->unit_remove_list, attacker_index);
         return BOTH_DESTROYED;
     }
     }
@@ -990,8 +1021,8 @@ bool board_tile_in_bounds(Board *board, int x, int y)
 
 bool board_tile_is_occupied(Board *board, int x, int y)
 {
-    return (board->units->unit_tile_occupation_status[y * board->board_dimension_x + x] != -1 || x < 0 ||
-            x >= board->board_dimension_x || y < 0 || y >= board->board_dimension_y ||
+    return (x < 0 || x >= board->board_dimension_x || y < 0 || y >= board->board_dimension_y ||
+            board->units->unit_tile_occupation_status[y * board->board_dimension_x + x] != -1 ||
             (x == board->planets->planet_tile_indices[0] && y == board->planets->planet_tile_indices[1]));
 }
 
@@ -1049,10 +1080,13 @@ void board_clear(Board *board)
     da_int_free(board->board_highlighted_path);
     free(board->board_highlighted_path);
     board->board_highlighted_path = NULL;
+    da_int_free(board->board_moveable_tiles);
     free(board->board_moveable_tiles);
     board->board_moveable_tiles = NULL;
+    da_int_free(board->board_attackable_tiles);
     free(board->board_attackable_tiles);
     board->board_attackable_tiles = NULL;
+    da_int_free(board->board_swapable_tiles);
     free(board->board_swapable_tiles);
     board->board_swapable_tiles = NULL;
     units_destroy(board->units);

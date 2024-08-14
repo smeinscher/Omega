@@ -7,8 +7,9 @@
 #include "board.h"
 #include <malloc.h>
 #include <memory.h>
+#include <stdlib.h>
 
-Planets *planets_create(int board_dimension_x, int board_dimension_y)
+Planets *planets_create(int board_dimension_x, int board_dimension_y, int planet_count)
 {
     Planets *planets = malloc(sizeof(Planets));
     if (planets == NULL)
@@ -78,10 +79,19 @@ Planets *planets_create(int board_dimension_x, int board_dimension_y)
     }
 
     planet_add(planets, 0.8f, SUN, 0, board_dimension_x / 2, board_dimension_y / 2);
-    planet_add(planets, 0.2f, MERCURY, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
-    planet_add(planets, 0.3f, VENUS, 2, board_dimension_x / 2 + 2, board_dimension_y / 2 - 2);
-    planet_add(planets, 0.3f, EARTH, 3, board_dimension_x / 2, board_dimension_y / 2 + 3);
-    planet_add(planets, 0.26f, MARS, 4, board_dimension_x / 2 + 4, board_dimension_y / 2);
+    int type = MERCURY;
+    for (int i = 0; i < planet_count; i++)
+    {
+        float rand_size = (float)(rand() % 30 + 20) / 100.0f;
+        int rand_x, rand_y;
+        hex_grid_get_random_position(i + 1, board_dimension_y / 2, &rand_x, &rand_y);
+        planet_add(planets, rand_size, type, i + 1, board_dimension_x / 2 + rand_x, board_dimension_y / 2 + rand_y);
+        type++;
+    }
+    //    planet_add(planets, 0.2f, MERCURY, 1, board_dimension_x / 2, board_dimension_y / 2 - 1);
+    //    planet_add(planets, 0.3f, VENUS, 2, board_dimension_x / 2 + 2, board_dimension_y / 2 - 2);
+    //    planet_add(planets, 0.3f, EARTH, 3, board_dimension_x / 2, board_dimension_y / 2 + 3);
+    //    planet_add(planets, 0.26f, MARS, 4, board_dimension_x / 2 + 4, board_dimension_y / 2);
     // planet_add(planets, 0.25f, NEPTUNE, 8, board_dimension_x / 2 - 8, board_dimension_y / 2);
     //    int asteroids_distance_from_sun = 5;
     //    int q = 0;
@@ -109,10 +119,14 @@ void planet_orbit(Planets *planets)
         int x, y;
         x = planets->planet_tile_indices[i * 2] - planets->planet_tile_indices[0];
         y = planets->planet_tile_indices[i * 2 + 1] - planets->planet_tile_indices[1];
+        if (x <= -10 || x >= 10 || y <= -10 || y >= 10)
+        {
+            printf("gah...\n");
+        }
         int q, r;
-        hex_grid_offset_to_axial(x, y, &q, &r);
+        hex_grid_offset_to_axial(x, y, planets->planet_tile_indices[1], &q, &r);
         hex_grid_rotation_get_next(false, planets->planet_distance_from_sun[i], &q, &r);
-        hex_grid_axial_to_offset(q, r, &x, &y);
+        hex_grid_axial_to_offset(q, r, planets->planet_tile_indices[1], &x, &y);
         planets->planet_tile_indices[i * 2] = planets->planet_tile_indices[0] + x;
         planets->planet_tile_indices[i * 2 + 1] = planets->planet_tile_indices[1] + y;
         planet_update_position(planets, i);
@@ -160,34 +174,37 @@ void planet_update_position(Planets *planets, int planet_index)
 {
     int x = planets->planet_tile_indices[planet_index * 2];
     int y = planets->planet_tile_indices[planet_index * 2 + 1];
-    float size_x = board_get_hex_tile_height() * planets->planet_size[planet_index];
-    float size_y = board_get_hex_tile_height() * planets->planet_size[planet_index];
-    float offset_x = (board_get_hex_tile_width() - size_x) / 2.0f;
-    float offset_y = ((1.0f - planets->planet_size[planet_index]) * board_get_hex_tile_height()) / 2.0f;
-    planets->planet_positions[planet_index * 12] = (float)x * board_get_hex_tile_width() * 0.75f + offset_x;
-    planets->planet_positions[planet_index * 12 + 1] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y +
-        size_y;
+    float size_x = (float)board_get_hex_tile_height() * planets->planet_size[planet_index];
+    float size_y = (float)board_get_hex_tile_height() * planets->planet_size[planet_index];
+    float offset_x = ((float)board_get_hex_tile_width() - size_x) / 2.0f;
+    float offset_y = ((1.0f - planets->planet_size[planet_index]) * (float)board_get_hex_tile_height()) / 2.0f;
+    planets->planet_positions[planet_index * 12] = (float)x * (float)board_get_hex_tile_width() * 0.75f + offset_x;
+    planets->planet_positions[planet_index * 12 + 1] = (float)y * (float)board_get_hex_tile_height() +
+                                                       (float)(x % 2) * (float)board_get_hex_tile_height() / 2.0f +
+                                                       offset_y + size_y;
     planets->planet_positions[planet_index * 12 + 2] =
-        (float)x * board_get_hex_tile_width() * 0.75f + offset_x + size_x;
-    planets->planet_positions[planet_index * 12 + 3] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y;
-    planets->planet_positions[planet_index * 12 + 4] = (float)x * board_get_hex_tile_width() * 0.75f + offset_x;
-    planets->planet_positions[planet_index * 12 + 5] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y;
-    planets->planet_positions[planet_index * 12 + 6] = (float)x * board_get_hex_tile_width() * 0.75f + offset_x;
-    planets->planet_positions[planet_index * 12 + 7] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y +
-        size_y;
+        (float)x * (float)board_get_hex_tile_width() * 0.75f + offset_x + size_x;
+    planets->planet_positions[planet_index * 12 + 3] = (float)y * (float)board_get_hex_tile_height() +
+                                                       (float)(x % 2) * (float)board_get_hex_tile_height() / 2.0f +
+                                                       offset_y;
+    planets->planet_positions[planet_index * 12 + 4] = (float)x * (float)board_get_hex_tile_width() * 0.75f + offset_x;
+    planets->planet_positions[planet_index * 12 + 5] = (float)y * (float)board_get_hex_tile_height() +
+                                                       (float)(x % 2) * (float)board_get_hex_tile_height() / 2.0f +
+                                                       offset_y;
+    planets->planet_positions[planet_index * 12 + 6] = (float)x * (float)board_get_hex_tile_width() * 0.75f + offset_x;
+    planets->planet_positions[planet_index * 12 + 7] = (float)y * (float)board_get_hex_tile_height() +
+                                                       (float)(x % 2) * (float)board_get_hex_tile_height() / 2.0f +
+                                                       offset_y + size_y;
     planets->planet_positions[planet_index * 12 + 8] =
-        (float)x * board_get_hex_tile_width() * 0.75f + offset_x + size_x;
-    planets->planet_positions[planet_index * 12 + 9] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y;
+        (float)x * (float)board_get_hex_tile_width() * 0.75f + offset_x + size_x;
+    planets->planet_positions[planet_index * 12 + 9] = (float)y * (float)board_get_hex_tile_height() +
+                                                       (float)(x % 2) * (float)board_get_hex_tile_height() / 2.0f +
+                                                       offset_y;
     planets->planet_positions[planet_index * 12 + 10] =
-        (float)x * board_get_hex_tile_width() * 0.75f + offset_x + size_x;
-    planets->planet_positions[planet_index * 12 + 11] =
-        (float)y * board_get_hex_tile_height() + (float)(x % 2) * board_get_hex_tile_height() / 2.0f + offset_y +
-        size_y;
+        (float)x * (float)board_get_hex_tile_width() * 0.75f + offset_x + size_x;
+    planets->planet_positions[planet_index * 12 + 11] = (float)y * (float)board_get_hex_tile_height() +
+                                                        (float)(x % 2) * (float)board_get_hex_tile_height() / 2.0f +
+                                                        offset_y + size_y;
 
     planets->planet_update_flags |= PLANET_UPDATE;
 }
@@ -276,8 +293,8 @@ int planet_find_closest(Planets *planets, int x, int y)
         int planet_x = planets->planet_tile_indices[i * 2];
         int planet_y = planets->planet_tile_indices[i * 2 + 1];
         int q, r, planet_q, planet_r;
-        hex_grid_offset_to_axial(x, y, &q, &r);
-        hex_grid_offset_to_axial(planet_x, planet_y, &planet_q, &planet_r);
+        hex_grid_offset_to_axial(x, y, 0, &q, &r);
+        hex_grid_offset_to_axial(planet_x, planet_y, 0, &planet_q, &planet_r);
         int distance = hex_grid_get_axial_distance(q, r, planet_q, planet_r);
         if (distance < min || min == -1)
         {

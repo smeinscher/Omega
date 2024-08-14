@@ -12,22 +12,12 @@
 
 enum PlanetType
 {
-    CRYSTAL,
-    EARTH,
-    HOT,
-    ICY,
-    JUPITER,
-    MARS,
-    MERCURY,
-    MOON,
-    NEPTUNE,
-    RADIATED,
-    SATURN,
     SUN,
-    TERRESTRIAL,
-    URANUS,
+    MERCURY,
     VENUS,
-    ASTEROIDS
+    EARTH,
+    MARS,
+    ICY,
 };
 
 typedef struct Planets
@@ -44,7 +34,7 @@ typedef struct Planets
     float *planet_colors;
 } Planets;
 
-Planets *planets_create(int board_dimension_x, int board_dimension_y);
+Planets *planets_create(int board_dimension_x, int board_dimension_y, int planet_count);
 
 void planet_orbit(Planets *planets);
 
