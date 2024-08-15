@@ -7,6 +7,7 @@
 
 #include "../players/resources.h"
 #include "../util/dynamic_array.h"
+#include "text.h"
 
 #define UNIT_UPDATE 0x1
 #define UNIT_UPDATE_HEALTH 0x2
@@ -41,6 +42,7 @@ enum MoveType
     REGULAR,
     ATTACK,
     RETREAT,
+    INVADE,
     SWAP
 };
 
@@ -166,6 +168,10 @@ void units_process_actions(Units *units, int turn, int board_dimension_x, int bo
 int units_find_nearest_friendly(Units *units, int player_index, int x, int y, int max_distance);
 
 int units_find_nearest_enemy(Units *units, int player_index, int x, int y, int max_distance);
+
+bool unit_in_remove_list(Units *units, int unit_index);
+
+void units_process_display_text(Units *units, TextData *text_data, int end_x, int end_y, int board_dimension_x);
 
 void units_clear(Units *units);
 

@@ -337,21 +337,23 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     string_free(&str_def);
     da_int_push_back(&units->display_info_unit_index, defender_index);
     da_float_push_back(&units->unit_display_info_time, 3.0f);
+    float defender_base_damage = unit_base_damage[units->unit_type[defender_index]];
+    float defender_damage = 0.0f;
     if (units->unit_type[defender_index] != WORKER && units->unit_type[defender_index] != STATION)
     {
-        float defender_base_damage = unit_base_damage[units->unit_type[defender_index]];
-        float defender_damage = ((float)(rand() % ((int)defender_base_damage * 100)) + defender_base_damage) /
-                                unit_base_damage[units->unit_type[defender_index]];
-        units->unit_health[attacker_index] -= defender_damage;
-        sprintf(buffer, "-%.2f", defender_damage);
-        String str_att;
-        string_init(&str_att, 10);
-        string_push_back(&str_att, buffer, 10);
-        da_string_push_back(&units->unit_display_info, str_att);
-        string_free(&str_att);
-        da_int_push_back(&units->display_info_unit_index, attacker_index);
-        da_float_push_back(&units->unit_display_info_time, 3.0f);
+
+        defender_damage = ((float)(rand() % ((int)defender_base_damage * 100)) + defender_base_damage) /
+                          unit_base_damage[units->unit_type[defender_index]];
     }
+    units->unit_health[attacker_index] -= defender_damage;
+    sprintf(buffer, "-%.2f", defender_damage);
+    String str_att;
+    string_init(&str_att, 10);
+    string_push_back(&str_att, buffer, 10);
+    da_string_push_back(&units->unit_display_info, str_att);
+    string_free(&str_att);
+    da_int_push_back(&units->display_info_unit_index, attacker_index);
+    da_float_push_back(&units->unit_display_info_time, 3.0f);
     if (units->unit_health[defender_index] > 0.0f && units->unit_health[attacker_index] > 0.0f)
     {
         unit_update_health_position(units, defender_index);
@@ -917,6 +919,45 @@ int units_find_nearest_enemy(Units *units, int player_index, int x, int y, int m
         }
     }
     return unit_index;
+}
+
+bool unit_in_remove_list(Units *units, int unit_index)
+{
+    for (int i = 0; i < units->unit_remove_list.used; i++)
+    {
+        if (units->unit_remove_list.array[i] == unit_index)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void units_process_display_text(Units *units, TextData *text_data, int end_x, int end_y, int board_dimension_x)
+{
+    int unit_index_a = units->display_info_unit_index.array[0];
+    float a_x = units->unit_positions[unit_index_a * 12] - BOARD_HEX_TILE_WIDTH / 2.0f;
+    float a_y = units->unit_positions[unit_index_a * 12 + 3];
+    char *text_a = string_to_c_str(&units->unit_display_info.array[0]);
+    text_data_add(text_data, text_a, units->unit_display_info.array[0].used, a_x, a_y, 0.4f, 1.0f, 0.0f, 0.0f, 1.0f,
+                  units->unit_display_info_time.array[0]);
+    free(text_a);
+    da_int_remove(&units->display_info_unit_index, 0);
+    da_string_remove(&units->unit_display_info, 0);
+    da_float_remove(&units->unit_display_info_time, 0);
+    char *text_b = string_to_c_str(&units->unit_display_info.array[0]);
+    if (text_b[1] != '0')
+    {
+        int unit_index_b = units->display_info_unit_index.array[0];
+        float b_x = units->unit_positions[unit_index_b * 12] - BOARD_HEX_TILE_WIDTH / 2.0f;
+        float b_y = units->unit_positions[unit_index_b * 12 + 3];
+        text_data_add(text_data, text_b, units->unit_display_info.array[0].used, b_x, b_y, 0.4f, 1.0f, 0.0f, 0.0f, 1.0f,
+                      units->unit_display_info_time.array[0]);
+    }
+    free(text_b);
+    da_int_remove(&units->display_info_unit_index, 0);
+    da_string_remove(&units->unit_display_info, 0);
+    da_float_remove(&units->unit_display_info_time, 0);
 }
 
 void units_clear(Units *units)

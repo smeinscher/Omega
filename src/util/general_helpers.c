@@ -511,7 +511,8 @@ void hex_grid_fill_attackable_tiles(Board *board, int unit_index, DynamicIntArra
     }
     int enemy_unit_index = board->units->unit_tile_occupation_status[y * board->board_dimension_x + x];
     if (!in_possible_tiles && enemy_unit_index != -1 &&
-        board->units->unit_owner[enemy_unit_index] != board->units->unit_owner[unit_index])
+        board->units->unit_owner[enemy_unit_index] != board->units->unit_owner[unit_index] &&
+        !unit_in_remove_list(board->units, enemy_unit_index))
     {
         da_int_push_back(possible_tiles, x);
         da_int_push_back(possible_tiles, y);

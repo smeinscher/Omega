@@ -79,7 +79,7 @@ bool ai_unit_attack(Board *board, Players *players, int player_index, int unit_i
         int defending_unit_index =
             board->units->unit_tile_occupation_status[possible_attacks->array[r * 2 + 1] * board->board_dimension_x +
                                                       possible_attacks->array[r * 2]];
-        if (defending_unit_index != -1)
+        if (defending_unit_index != -1 && !unit_in_remove_list(board->units, defending_unit_index))
         {
             int defending_unit_owner = board->units->unit_owner[defending_unit_index] - 1;
             BattleResult result = board_process_attack(board, defending_unit_index, unit_index);

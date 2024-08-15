@@ -861,29 +861,22 @@ void main_game_scene_update()
 
     for (int i = 0; i < g_current_board->units->display_info_unit_index.used; i++)
     {
+        char *text = string_to_c_str(&g_current_board->units->unit_display_info.array[i]);
+        if (text[0] == '-')
+        {
+            continue;
+        }
         int unit_index = g_current_board->units->display_info_unit_index.array[i];
         float x = g_current_board->units->unit_positions[unit_index * 12] - BOARD_HEX_TILE_WIDTH / 2.0f;
         float y = g_current_board->units->unit_positions[unit_index * 12 + 3];
-        char *text = string_to_c_str(&g_current_board->units->unit_display_info.array[i]);
-        float r, g;
-        if (text[0] == '-')
-        {
-            r = 1.0f;
-            g = 0.0f;
-        }
-        else
-        {
-            r = 0.0f;
-            g = 1.0f;
-        }
-        text_data_add(g_text_data, text, g_current_board->units->unit_display_info.array[i].used, x, y, 0.4f, r, g,
-                      0.0f, 1.0f, g_current_board->units->unit_display_info_time.array[i]);
+        text_data_add(g_text_data, text, g_current_board->units->unit_display_info.array[i].used, x, y, 0.4f, 0.0f,
+                      1.0f, 0.0f, 1.0f, g_current_board->units->unit_display_info_time.array[i]);
         free(text);
+        da_int_remove(&g_current_board->units->display_info_unit_index, i);
+        da_string_remove(&g_current_board->units->unit_display_info, i);
+        da_float_remove(&g_current_board->units->unit_display_info_time, i);
+        i--;
     }
-    da_int_clear(&g_current_board->units->display_info_unit_index);
-    da_string_clear(&g_current_board->units->unit_display_info);
-    da_float_clear(&g_current_board->units->unit_display_info_time);
-
     text_data_update(g_text_data);
 
     if (g_current_board->units->moves_unit_index.used != 0)
@@ -904,6 +897,38 @@ void main_game_scene_update()
         {
             switch (move_type)
             {
+            case INVADE: {
+                units_process_display_text(g_current_board->units, g_text_data, end_x, end_y,
+                                           g_current_board->board_dimension_x);
+                bool destroy_self;
+                for (int i = 0; i < g_current_board->units->unit_remove_list.used; i++)
+                {
+                    int remove_unit_index = g_current_board->units->unit_remove_list.array[i];
+                    destroy_self = remove_unit_index == unit_index;
+                    if (end_x == g_current_board->units->unit_indices[remove_unit_index * 2] &&
+                        end_y == g_current_board->units->unit_indices[remove_unit_index * 2 + 1])
+                    {
+                        unit_remove(g_current_board->units, remove_unit_index, end_x, end_y,
+                                    g_current_board->board_dimension_x);
+                        da_int_remove(&g_current_board->units->unit_remove_list, i);
+                        break;
+                    }
+                }
+                if (!destroy_self)
+                {
+                    unit_move(g_current_board->units, unit_index, NULL, end_x, end_y,
+                              g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                    g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
+                    unit_occupy_new_tile(g_current_board->units, unit_index, start_x, start_y, end_x, end_y,
+                                         g_current_board->board_dimension_x);
+                }
+                else
+                {
+                    unit_remove(g_current_board->units, unit_index, start_x, start_y,
+                                g_current_board->board_dimension_x);
+                }
+                break;
+            }
             case REGULAR: {
                 DynamicIntArray *move_path =
                     hex_grid_find_path(g_current_board, start_x, start_y, end_x, end_y,
@@ -922,6 +947,8 @@ void main_game_scene_update()
             case ATTACK: {
                 g_stash_x = start_x;
                 g_stash_y = start_y;
+                units_process_display_text(g_current_board->units, g_text_data, end_x, end_y,
+                                           g_current_board->board_dimension_x);
                 break;
             }
             case RETREAT: {
