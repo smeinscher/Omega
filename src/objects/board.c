@@ -486,9 +486,12 @@ void board_handle_tile_click(Board *board)
             bool can_move = in_board_moveable_tiles(board, move_x, move_y);
             if (can_attack)
             {
-                int enemy_unit_index =
-                    board->units->unit_tile_occupation_status[move_y * board->board_dimension_x + move_x];
-                board_process_attack(board, enemy_unit_index, unit_index);
+                //                int enemy_unit_index =
+                //                    board->units->unit_tile_occupation_status[move_y * board->board_dimension_x +
+                //                    move_x];
+                //                board_process_attack(board, enemy_unit_index, unit_index);
+                unit_add_movement_animation(board->units, unit_index, board->selected_tile_index_x,
+                                            board->selected_tile_index_y, move_x, move_y, ATTACK);
                 unit_cancel_action(board->units, unit_index);
             }
             else if (can_swap)
@@ -944,14 +947,14 @@ BattleResult board_process_attack(Board *board, int defender_index, int attacker
     switch (unit_attack(board->units, defender_index, attacker_index))
     {
     case NO_UNITS_DESTROYED: {
-        DynamicIntArray *da = hex_grid_find_path(board, start_x, start_y, move_x, move_y, board->board_dimension_x,
+        /*DynamicIntArray *da = hex_grid_find_path(board, start_x, start_y, move_x, move_y, board->board_dimension_x,
                                                  board->board_dimension_y);
         if (da == NULL)
         {
             printf("ruh row\n");
             break;
         }
-        unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, ATTACK);
+        //        unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, ATTACK);
         if (da->used >= 2)
         {
             unit_add_movement_animation(board->units, attacker_index, move_x, move_y, da->array[0], da->array[1],
@@ -965,15 +968,16 @@ BattleResult board_process_attack(Board *board, int defender_index, int attacker
         }
         da_int_free(da);
         free(da);
+         */
         return NO_UNITS_DESTROYED;
     }
     case DEFENDER_DESTROYED: {
         if (board->units->unit_type[defender_index] != STATION)
         {
-            //            unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
-            da_int_push_back(&board->units->unit_remove_list, defender_index);
-            unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, INVADE);
-            //            unit_occupy_new_tile(board->units, attacker_index, start_x, start_y, move_x, move_y,
+            unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
+            //            da_int_push_back(&board->units->unit_remove_list, defender_index);
+            //            unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y,
+            //            INVADE); unit_occupy_new_tile(board->units, attacker_index, start_x, start_y, move_x, move_y,
             //                                 board->board_dimension_x);
         }
         else
@@ -988,18 +992,18 @@ BattleResult board_process_attack(Board *board, int defender_index, int attacker
         return DEFENDER_DESTROYED;
     }
     case ATTACKER_DESTROYED: {
-        //        unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
-        //                    board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
-        da_int_push_back(&board->units->unit_remove_list, attacker_index);
+        unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
+                    board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
+        //        da_int_push_back(&board->units->unit_remove_list, attacker_index);
         return ATTACKER_DESTROYED;
     }
     case BOTH_DESTROYED: {
-        //        unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
-        //        unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
-        //                    board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
-        unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, INVADE);
-        da_int_push_back(&board->units->unit_remove_list, defender_index);
-        da_int_push_back(&board->units->unit_remove_list, attacker_index);
+        unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
+        unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
+                    board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
+        // unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, INVADE);
+        //         da_int_push_back(&board->units->unit_remove_list, defender_index);
+        //         da_int_push_back(&board->units->unit_remove_list, attacker_index);
         return BOTH_DESTROYED;
     }
     }

@@ -6,7 +6,37 @@
 #include "../util/general_helpers.h"
 #include <stdlib.h>
 
-void ai_spawn_unit(Board *board, Players *players, int player_index, DynamicIntArray *station_indices)
+static DynamicIntArray *g_current_moving_units;
+
+void ai_start_turn(Board *board, Players *players, int player_index, DynamicIntArray *moving_units)
+{
+    g_current_moving_units = moving_units;
+}
+
+void ai_end_turn()
+{
+    da_int_free(g_current_moving_units);
+    free(g_current_moving_units);
+}
+
+bool ai_process_next_move(Board *board, Players *players, int player_index)
+{
+    int index = g_current_moving_units->used - 1;
+    if (index < 0)
+    {
+        ai_end_turn();
+        return true;
+    }
+    if (!ai_unit_attack(board, players, player_index, g_current_moving_units->array[index]))
+    {
+        ai_unit_move(board, players, player_index, g_current_moving_units->array[index]);
+    }
+    da_int_pop_back(g_current_moving_units);
+
+    return false;
+}
+
+void ai_spawn_units(Board *board, Players *players, int player_index, DynamicIntArray *station_indices)
 {
     for (int i = 0; i < station_indices->used; i++)
     {
@@ -23,15 +53,17 @@ void ai_spawn_unit(Board *board, Players *players, int player_index, DynamicIntA
         int units_spawned = 0;
         while (units_spawned < units_to_spawn)
         {
-            if (!unit_purchase_with_score(board->units, player_index, &players->player_score[player_index],
-                                          players->desired_unit_purchase[player_index], possible_moves->array[r * 2],
-                                          possible_moves->array[r * 2 + 1], board->board_dimension_x,
-                                          board->board_dimension_y))
+            int unit_index = unit_purchase_with_score(board->units, player_index, &players->player_score[player_index],
+                                                      players->desired_unit_purchase[player_index],
+                                                      possible_moves->array[r * 2], possible_moves->array[r * 2 + 1],
+                                                      board->board_dimension_x, board->board_dimension_y);
+            if (unit_index == -1)
             {
                 da_int_free(possible_moves);
                 free(possible_moves);
                 return;
             }
+            da_int_push_back(g_current_moving_units, unit_index);
             int rand_unit = rand() % 3000;
             switch (player_index)
             {
@@ -71,6 +103,10 @@ void ai_spawn_unit(Board *board, Players *players, int player_index, DynamicIntA
 
 bool ai_unit_attack(Board *board, Players *players, int player_index, int unit_index)
 {
+    if (board->units->unit_type[unit_index] == WORKER || board->units->unit_type[unit_index] == STATION)
+    {
+        return false;
+    }
     DynamicIntArray *possible_attacks = hex_grid_possible_attacks(
         board, unit_index, board->units->unit_indices[unit_index * 2], board->units->unit_indices[unit_index * 2 + 1]);
     if (possible_attacks->used > 0)
@@ -81,24 +117,31 @@ bool ai_unit_attack(Board *board, Players *players, int player_index, int unit_i
                                                       possible_attacks->array[r * 2]];
         if (defending_unit_index != -1 && !unit_in_remove_list(board->units, defending_unit_index))
         {
-            int defending_unit_owner = board->units->unit_owner[defending_unit_index] - 1;
-            BattleResult result = board_process_attack(board, defending_unit_index, unit_index);
-            switch (result)
-            {
-            // TODO: change score update to reflect unit type
-            case NO_UNITS_DESTROYED:
-                break;
-            case DEFENDER_DESTROYED:
-                players->player_score[player_index] +=
-                    unit_get_base_cost(board->units->unit_type[defending_unit_index]) / 8;
-                break;
-            case ATTACKER_DESTROYED:
-                players->player_score[defending_unit_owner] +=
-                    unit_get_base_cost(board->units->unit_type[unit_index]) / 10;
-                break;
-            case BOTH_DESTROYED:
-                break;
-            }
+            int start_x = board->units->unit_indices[unit_index * 2];
+            int start_y = board->units->unit_indices[unit_index * 2 + 1];
+            int end_x = board->units->unit_indices[defending_unit_index * 2];
+            int end_y = board->units->unit_indices[defending_unit_index * 2 + 1];
+            unit_add_movement_animation(board->units, unit_index, start_x, start_y, end_x, end_y, ATTACK);
+            /*
+                        int defending_unit_owner = board->units->unit_owner[defending_unit_index] - 1;
+                        BattleResult result = board_process_attack(board, defending_unit_index, unit_index);
+                        switch (result)
+                        {
+                        // TODO: change score update to reflect unit type
+                        case NO_UNITS_DESTROYED:
+                            break;
+                        case DEFENDER_DESTROYED:
+                            players->player_score[player_index] +=
+                                unit_get_base_cost(board->units->unit_type[defending_unit_index]) / 8;
+                            break;
+                        case ATTACKER_DESTROYED:
+                            players->player_score[defending_unit_owner] +=
+                                unit_get_base_cost(board->units->unit_type[unit_index]) / 10;
+                            break;
+                        case BOTH_DESTROYED:
+                            break;
+                        }
+            */
         }
         else
         {
@@ -149,6 +192,7 @@ void ai_unit_move(Board *board, Players *players, int player_index, int unit_ind
         {
             if (unit_doing_action(board->units, unit_index, UNIT_BUILD_STATION))
             {
+                unit_add_movement_animation(board->units, unit_index, -1, -1, -1, -1, NOTHING);
                 return;
             }
             int planet_index = planet_find_closest(board->planets, board->units->unit_indices[unit_index * 2],
@@ -159,6 +203,7 @@ void ai_unit_move(Board *board, Players *players, int player_index, int unit_ind
                 planet_y == board->units->unit_indices[unit_index * 2 + 1])
             {
                 board_worker_build_station(board, unit_index);
+                unit_add_movement_animation(board->units, unit_index, -1, -1, -1, -1, NOTHING);
                 return;
             }
             if (board->units->unit_tile_occupation_status[planet_y * board->board_dimension_x + planet_x] == -1)
@@ -236,9 +281,9 @@ void ai_unit_move(Board *board, Players *players, int player_index, int unit_ind
         unit_add_movement_animation(board->units, unit_index, board->units->unit_indices[unit_index * 2],
                                     board->units->unit_indices[unit_index * 2 + 1], possible_moves->array[move * 2],
                                     possible_moves->array[move * 2 + 1], 0);
-        unit_occupy_new_tile(board->units, unit_index, board->units->unit_indices[unit_index * 2],
-                             board->units->unit_indices[unit_index * 2 + 1], possible_moves->array[move * 2],
-                             possible_moves->array[move * 2 + 1], board->board_dimension_x);
+        //        unit_occupy_new_tile(board->units, unit_index, board->units->unit_indices[unit_index * 2],
+        //                             board->units->unit_indices[unit_index * 2 + 1], possible_moves->array[move * 2],
+        //                             possible_moves->array[move * 2 + 1], board->board_dimension_x);
         /*
                             unit_move(board->units, i, board->units->unit_indices[i * 2],
            board->units->unit_indices[i * 2 + 1], possible_moves->array[r * 2], possible_moves->array[r * 2

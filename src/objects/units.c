@@ -17,8 +17,7 @@ static float unit_base_movement[] = {4.0f, 1.0f, 2.0f, 0.0f};
 static int unit_base_resource_cost[] = {0, 50, 500, 40, 150, 3000, 10, 50, 1250, 0, 0, 0};
 static int unit_base_cost[] = {500, 2225, 900, 0};
 
-static int g_stash_x = -1;
-static int g_stash_y = -1;
+static TextData *g_text_data = NULL;
 
 Units *units_create(int board_dimension_x, int board_dimension_y)
 {
@@ -255,7 +254,7 @@ void unit_clear_vertices(Units *units)
     memset(units->unit_health_colors, 0, sizeof(float) * units->unit_buffer_size * 24);
 }
 
-void unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x, int board_dimension_y)
+int unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x, int board_dimension_y)
 {
     int new_unit_index;
     if (units->unit_freed_indices.used == 0)
@@ -294,6 +293,7 @@ void unit_add(Units *units, int owner, int type, int x, int y, int board_dimensi
     unit_update_health_color(units, new_unit_index);
 
     //    unit_claim_territory(units, new_unit_index, x, y, board_dimension_x, board_dimension_y);
+    return new_unit_index;
 }
 
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x)
@@ -330,13 +330,15 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     units->unit_health[defender_index] -= attacker_damage;
     char buffer[10];
     sprintf(buffer, "-%.2f", attacker_damage);
-    String str_def;
-    string_init(&str_def, 10);
-    string_push_back(&str_def, buffer, 10);
-    da_string_push_back(&units->unit_display_info, str_def);
-    string_free(&str_def);
-    da_int_push_back(&units->display_info_unit_index, defender_index);
-    da_float_push_back(&units->unit_display_info_time, 3.0f);
+    //    String str_def;
+    //    string_init(&str_def, 10);
+    //    string_push_back(&str_def, buffer, 10);
+    //    da_string_push_back(&units->unit_display_info, str_def);
+    //    string_free(&str_def);
+    //    da_int_push_back(&units->display_info_unit_index, defender_index);
+    //    da_float_push_back(&units->unit_display_info_time, 3.0f);
+    text_data_add(g_text_data, buffer, 10, units->unit_positions[defender_index * 12],
+                  units->unit_positions[defender_index * 12 + 3], 0.4f, 1.0f, 0.0f, 0.0f, 1.0f, 3.0f);
     float defender_base_damage = unit_base_damage[units->unit_type[defender_index]];
     float defender_damage = 0.0f;
     if (units->unit_type[defender_index] != WORKER && units->unit_type[defender_index] != STATION)
@@ -347,13 +349,19 @@ BattleResult unit_attack(Units *units, int defender_index, int attacker_index)
     }
     units->unit_health[attacker_index] -= defender_damage;
     sprintf(buffer, "-%.2f", defender_damage);
-    String str_att;
-    string_init(&str_att, 10);
-    string_push_back(&str_att, buffer, 10);
-    da_string_push_back(&units->unit_display_info, str_att);
-    string_free(&str_att);
-    da_int_push_back(&units->display_info_unit_index, attacker_index);
-    da_float_push_back(&units->unit_display_info_time, 3.0f);
+    //    String str_att;
+    //    string_init(&str_att, 10);
+    //    string_push_back(&str_att, buffer, 10);
+    //    da_string_push_back(&units->unit_display_info, str_att);
+    //    string_free(&str_att);
+    //    da_int_push_back(&units->display_info_unit_index, attacker_index);
+    //    da_float_push_back(&units->unit_display_info_time, 3.0f);
+    float attacker_x = (float)units->unit_indices[attacker_index * 2] * board_get_hex_tile_width() * 0.75f +
+                       (board_get_hex_tile_width() - units->unit_size_x);
+    float attacker_y = (float)units->unit_indices[attacker_index * 2 + 1] * board_get_hex_tile_height() +
+                       (float)(units->unit_indices[attacker_index * 2] % 2) * board_get_hex_tile_height() / 2.0f +
+                       (board_get_hex_tile_height() - units->unit_size_y);
+    text_data_add(g_text_data, buffer, 10, attacker_x, attacker_y, 0.4f, 1.0f, 0.0f, 0.0f, 1.0f, 3.0f);
     if (units->unit_health[defender_index] > 0.0f && units->unit_health[attacker_index] > 0.0f)
     {
         unit_update_health_position(units, defender_index);
@@ -391,13 +399,15 @@ void unit_replenish_health(Units *units, int unit_index, float amount)
     }
     char buffer[10];
     sprintf(buffer, "+%.2f", amount);
-    String str;
-    string_init(&str, 10);
-    string_push_back(&str, buffer, 10);
-    da_string_push_back(&units->unit_display_info, str);
-    string_free(&str);
-    da_int_push_back(&units->display_info_unit_index, unit_index);
-    da_float_push_back(&units->unit_display_info_time, 3.0f);
+    //    String str;
+    //    string_init(&str, 10);
+    //    string_push_back(&str, buffer, 10);
+    //    da_string_push_back(&units->unit_display_info, str);
+    text_data_add(g_text_data, buffer, 10, units->unit_positions[unit_index * 12],
+                  units->unit_positions[unit_index * 12 + 3], 0.4f, 0.0f, 1.0f, 0.0f, 1.0f, 3.0f);
+    //    string_free(&str);
+    //    da_int_push_back(&units->display_info_unit_index, unit_index);
+    //    da_float_push_back(&units->unit_display_info_time, 3.0f);
     units->unit_health[unit_index] += amount;
     unit_update_health_position(units, unit_index);
 }
@@ -423,28 +433,25 @@ bool unit_purchase(int player_index, Resources *resources, Units *units, UnitTyp
     return false;
 }
 
-bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
-                              int board_dimension_x, int board_dimension_y)
+int unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
+                             int board_dimension_x, int board_dimension_y)
 {
     if (unit_type == WORKER && *score >= unit_base_cost[WORKER])
     {
-        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
         *score -= unit_base_cost[WORKER];
-        return true;
+        return unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
     }
     if (unit_type == DROID && *score >= unit_base_cost[DROID])
     {
-        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
         *score -= unit_base_cost[DROID];
-        return true;
+        return unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
     }
     if (unit_type == BATTLESHIP && *score >= unit_base_cost[BATTLESHIP])
     {
-        unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
         *score -= unit_base_cost[BATTLESHIP];
-        return true;
+        return unit_add(units, player_index + 1, unit_type, x, y, board_dimension_x, board_dimension_y);
     }
-    return false;
+    return -1;
 }
 
 int unit_get_base_cost(UnitType unit_type)
@@ -478,12 +485,6 @@ void unit_move(Units *units, int unit_index, DynamicIntArray *move_path, int end
     //    printf("Unit %d of Player %d moved from %d, %d to %d, %d\n", unit_index, units->unit_owner[unit_index],
     //    current_x,
     //           current_y, destination_x, destination_y);
-}
-
-void unit_stash_position(int x, int y)
-{
-    g_stash_x = x;
-    g_stash_y = y;
 }
 
 void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_y, int b_x, int b_y,
@@ -958,6 +959,11 @@ void units_process_display_text(Units *units, TextData *text_data, int end_x, in
     da_int_remove(&units->display_info_unit_index, 0);
     da_string_remove(&units->unit_display_info, 0);
     da_float_remove(&units->unit_display_info_time, 0);
+}
+
+void units_set_text_data(TextData *text_data)
+{
+    g_text_data = text_data;
 }
 
 void units_clear(Units *units)

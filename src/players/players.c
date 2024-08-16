@@ -175,17 +175,31 @@ void player_start_turn(Board *board, Players *players, int player_index)
     {
         DynamicIntArray stations;
         da_int_init(&stations, 1);
+        DynamicIntArray *moving_units = malloc(sizeof(DynamicIntArray));
+        da_int_init(moving_units, 1);
         for (int i = 0; i < board->units->unit_buffer_size; i++)
         {
-            if (board->units->unit_owner[i] == player_index + 1 && board->units->unit_type[i] == STATION)
+            if (board->units->unit_owner[i] == player_index + 1)
             {
-                da_int_push_back(&stations, i);
+                if (board->units->unit_type[i] == STATION)
+                {
+                    da_int_push_back(&stations, i);
+                }
+                else
+                {
+                    da_int_push_back(moving_units, i);
+                }
             }
         }
-        ai_spawn_unit(board, players, player_index, &stations);
+        ai_start_turn(board, players, player_index, moving_units);
+        ai_spawn_units(board, players, player_index, &stations);
         da_int_free(&stations);
 
-        for (int i = 0; i < board->units->unit_buffer_size; i++)
+        if (ai_process_next_move(board, players, player_index))
+        {
+            player_end_turn(board, players, player_index);
+        }
+        /*for (int i = 0; i < board->units->unit_buffer_size; i++)
         {
             if (board->units->unit_owner[i] != player_index + 1 || board->units->unit_type[i] == STATION)
             {
@@ -201,6 +215,7 @@ void player_start_turn(Board *board, Players *players, int player_index)
             ai_unit_move(board, players, player_index, i);
         }
         player_end_turn(board, players, player_index);
+        */
     }
 }
 

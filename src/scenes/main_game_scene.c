@@ -8,6 +8,7 @@
 #include "../objects/star_background.h"
 #include "../objects/text.h"
 #include "../platform/platform.h"
+#include "../players/ai_actions.h"
 #include "../players/players.h"
 #include "../renderer/camera.h"
 #include "../renderer/opengl_freetype_wrapper.h"
@@ -50,8 +51,8 @@ static Texture g_planet_texture = {0};
 static double g_mouse_pos_x = 0.0;
 static double g_mouse_pos_y = 0.0;
 
-static bool g_scroll_enabled = false;
-static bool g_movement_enabled = false;
+static bool g_scroll_enabled = true;
+static bool g_movement_enabled = true;
 
 static bool g_exit_program = false;
 
@@ -845,6 +846,7 @@ void main_game_scene_init()
 
     opengl_freetype_wrapper_load_font("../resources/fonts/HomeVideo/HomeVideo-BLG6G.ttf");
     g_text_data = text_data_create();
+    units_set_text_data(g_text_data);
 }
 
 void main_game_scene_update()
@@ -859,24 +861,26 @@ void main_game_scene_update()
     camera_update();
     main_game_scene_update_hovered_tile();
 
-    for (int i = 0; i < g_current_board->units->display_info_unit_index.used; i++)
-    {
-        char *text = string_to_c_str(&g_current_board->units->unit_display_info.array[i]);
-        if (text[0] == '-')
+    /*
+        for (int i = 0; i < g_current_board->units->display_info_unit_index.used; i++)
         {
-            continue;
+            char *text = string_to_c_str(&g_current_board->units->unit_display_info.array[i]);
+            if (text[0] == '-')
+            {
+                continue;
+            }
+            int unit_index = g_current_board->units->display_info_unit_index.array[i];
+            float x = g_current_board->units->unit_positions[unit_index * 12] - BOARD_HEX_TILE_WIDTH / 2.0f;
+            float y = g_current_board->units->unit_positions[unit_index * 12 + 3];
+            text_data_add(g_text_data, text, g_current_board->units->unit_display_info.array[i].used, x, y, 0.4f, 0.0f,
+                          1.0f, 0.0f, 1.0f, g_current_board->units->unit_display_info_time.array[i]);
+            free(text);
+            da_int_remove(&g_current_board->units->display_info_unit_index, i);
+            da_string_remove(&g_current_board->units->unit_display_info, i);
+            da_float_remove(&g_current_board->units->unit_display_info_time, i);
+            i--;
         }
-        int unit_index = g_current_board->units->display_info_unit_index.array[i];
-        float x = g_current_board->units->unit_positions[unit_index * 12] - BOARD_HEX_TILE_WIDTH / 2.0f;
-        float y = g_current_board->units->unit_positions[unit_index * 12 + 3];
-        text_data_add(g_text_data, text, g_current_board->units->unit_display_info.array[i].used, x, y, 0.4f, 0.0f,
-                      1.0f, 0.0f, 1.0f, g_current_board->units->unit_display_info_time.array[i]);
-        free(text);
-        da_int_remove(&g_current_board->units->display_info_unit_index, i);
-        da_string_remove(&g_current_board->units->unit_display_info, i);
-        da_float_remove(&g_current_board->units->unit_display_info_time, i);
-        i--;
-    }
+    */
     text_data_update(g_text_data);
 
     if (g_current_board->units->moves_unit_index.used != 0)
@@ -893,14 +897,30 @@ void main_game_scene_update()
         {
             g_current_board->units->unit_animation_progress = 0.0f;
         }
-        if (unit_animate_movement(g_current_board->units))
+        bool animation_complete = false;
+        if (move_type != NOTHING)
+        {
+            animation_complete = unit_animate_movement(g_current_board->units);
+        }
+        else
+        {
+            animation_complete = true;
+            da_int_remove(&g_current_board->units->moves_unit_index, 0);
+            da_int_remove(&g_current_board->units->moves_list, 0);
+            da_int_remove(&g_current_board->units->moves_list, 0);
+            da_int_remove(&g_current_board->units->moves_list, 0);
+            da_int_remove(&g_current_board->units->moves_list, 0);
+            da_int_remove(&g_current_board->units->move_type, 0);
+            g_current_board->units->unit_animation_progress = -1.0f;
+        }
+        if (animation_complete)
         {
             switch (move_type)
             {
             case INVADE: {
-                units_process_display_text(g_current_board->units, g_text_data, end_x, end_y,
-                                           g_current_board->board_dimension_x);
-                bool destroy_self;
+                //                units_process_display_text(g_current_board->units, g_text_data, end_x, end_y,
+                //                                           g_current_board->board_dimension_x);
+                /*bool destroy_self;
                 for (int i = 0; i < g_current_board->units->unit_remove_list.used; i++)
                 {
                     int remove_unit_index = g_current_board->units->unit_remove_list.array[i];
@@ -913,20 +933,19 @@ void main_game_scene_update()
                         da_int_remove(&g_current_board->units->unit_remove_list, i);
                         break;
                     }
-                }
-                if (!destroy_self)
-                {
-                    unit_move(g_current_board->units, unit_index, NULL, end_x, end_y,
-                              g_current_board->board_dimension_x, g_current_board->board_dimension_y);
-                    g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
-                    unit_occupy_new_tile(g_current_board->units, unit_index, start_x, start_y, end_x, end_y,
-                                         g_current_board->board_dimension_x);
-                }
-                else
-                {
-                    unit_remove(g_current_board->units, unit_index, start_x, start_y,
-                                g_current_board->board_dimension_x);
-                }
+                }*/
+                unit_move(g_current_board->units, unit_index, NULL, end_x, end_y, g_current_board->board_dimension_x,
+                          g_current_board->board_dimension_y);
+                g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
+                unit_occupy_new_tile(g_current_board->units, unit_index, start_x, start_y, end_x, end_y,
+                                     g_current_board->board_dimension_x);
+                /*
+                                else
+                                {
+                                    unit_remove(g_current_board->units, unit_index, start_x, start_y,
+                                                g_current_board->board_dimension_x);
+                                }
+                */
                 break;
             }
             case REGULAR: {
@@ -939,6 +958,8 @@ void main_game_scene_update()
                 }
                 unit_move(g_current_board->units, unit_index, move_path, end_x, end_y,
                           g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                unit_occupy_new_tile(g_current_board->units, unit_index, start_x, start_y, end_x, end_y,
+                                     g_current_board->board_dimension_x);
                 g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
                 da_int_free(move_path);
                 free(move_path);
@@ -947,8 +968,49 @@ void main_game_scene_update()
             case ATTACK: {
                 g_stash_x = start_x;
                 g_stash_y = start_y;
-                units_process_display_text(g_current_board->units, g_text_data, end_x, end_y,
-                                           g_current_board->board_dimension_x);
+                switch (board_process_attack(
+                    g_current_board,
+                    g_current_board->units
+                        ->unit_tile_occupation_status[end_y * g_current_board->board_dimension_x + end_x],
+                    unit_index))
+                {
+                case NO_UNITS_DESTROYED: {
+                    DynamicIntArray *da =
+                        hex_grid_find_path(g_current_board, start_x, start_y, end_x, end_y,
+                                           g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                    if (da == NULL)
+                    {
+                        printf("ruh row\n");
+                        break;
+                    }
+                    if (da->used >= 2)
+                    {
+                        unit_add_movement_animation(g_current_board->units, unit_index, end_x, end_y, da->array[0],
+                                                    da->array[1], RETREAT);
+                        unit_occupy_new_tile(g_current_board->units, unit_index, start_x, start_y, da->array[0],
+                                             da->array[1], g_current_board->board_dimension_x);
+                    }
+                    else
+                    {
+                        unit_add_movement_animation(g_current_board->units, unit_index, end_x, end_y, start_x, start_y,
+                                                    RETREAT);
+                    }
+                    da_int_free(da);
+                    free(da);
+                    break;
+                }
+                case DEFENDER_DESTROYED:
+                    unit_move(g_current_board->units, unit_index, NULL, end_x, end_y,
+                              g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                    g_current_board->board_update_flags |= BOARD_UPDATE_BORDERS;
+                    unit_occupy_new_tile(g_current_board->units, unit_index, start_x, start_y, end_x, end_y,
+                                         g_current_board->board_dimension_x);
+                    break;
+                default:
+                    break;
+                }
+                //                units_process_display_text(g_current_board->units, g_text_data, end_x, end_y,
+                //                                           g_current_board->board_dimension_x);
                 break;
             }
             case RETREAT: {
@@ -969,12 +1031,23 @@ void main_game_scene_update()
     }
     else // if (!is_human_player(g_players, g_current_board->board_current_turn % 4))
     {
-        if (!g_pause && g_players->player_flags & PLAYER_ENDED_TURN)
+        if (!g_pause)
         {
-            board_process_planet_orbit(g_current_board);
-            units_process_actions(g_current_board->units, g_current_board->board_current_turn / 4,
-                                  g_current_board->board_dimension_x, g_current_board->board_dimension_y);
-            player_start_turn(g_current_board, g_players, g_current_board->board_current_turn % 4);
+            if (!is_human_player(g_players, g_current_board->board_current_turn % 4) &&
+                !(g_players->player_flags & PLAYER_ENDED_TURN))
+            {
+                if (ai_process_next_move(g_current_board, g_players, g_current_board->board_current_turn % 4))
+                {
+                    player_end_turn(g_current_board, g_players, g_current_board->board_current_turn % 4);
+                }
+            }
+            else if (g_players->player_flags & PLAYER_ENDED_TURN)
+            {
+                board_process_planet_orbit(g_current_board);
+                units_process_actions(g_current_board->units, g_current_board->board_current_turn / 4,
+                                      g_current_board->board_dimension_x, g_current_board->board_dimension_y);
+                player_start_turn(g_current_board, g_players, g_current_board->board_current_turn % 4);
+            }
         }
     }
     int total_eliminated_players = 0;

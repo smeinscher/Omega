@@ -37,14 +37,15 @@ typedef enum BattleResult
     BOTH_DESTROYED
 } BattleResult;
 
-enum MoveType
+typedef enum MoveType
 {
     REGULAR,
     ATTACK,
     RETREAT,
     INVADE,
+    NOTHING,
     SWAP
-};
+} MoveType;
 
 typedef struct Units
 {
@@ -105,7 +106,7 @@ void unit_realloc(Units *units);
 
 void unit_clear_vertices(Units *units);
 
-void unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x, int board_dimension_y);
+int unit_add(Units *units, int owner, int type, int x, int y, int board_dimension_x, int board_dimension_y);
 
 void unit_remove(Units *units, int unit_index, int x, int y, int board_dimension_x);
 
@@ -118,8 +119,8 @@ void unit_replenish_movement(Units *units, int unit_index);
 bool unit_purchase(int player_index, Resources *resources, Units *units, UnitType unit_type, int x, int y,
                    int board_dimension_x, int board_dimension_y);
 
-bool unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
-                              int board_dimension_x, int board_dimension_y);
+int unit_purchase_with_score(Units *units, int player_index, int *score, UnitType unit_type, int x, int y,
+                             int board_dimension_x, int board_dimension_y);
 
 int unit_get_base_cost(UnitType unit_type);
 
@@ -127,8 +128,6 @@ bool unit_can_move(Units *units, int unit_index, int destination_x, int destinat
 
 void unit_move(Units *units, int unit_index, DynamicIntArray *move_path, int end_x, int end_y, int board_dimension_x,
                int board_dimension_y);
-
-void unit_stash_position(int x, int y);
 
 void unit_swap(Units *units, int unit_index_a, int unit_index_b, int a_x, int a_y, int b_x, int b_y,
                int board_dimension_x, bool strategic_swap);
@@ -172,6 +171,8 @@ int units_find_nearest_enemy(Units *units, int player_index, int x, int y, int m
 bool unit_in_remove_list(Units *units, int unit_index);
 
 void units_process_display_text(Units *units, TextData *text_data, int end_x, int end_y, int board_dimension_x);
+
+void units_set_text_data(TextData *text_data);
 
 void units_clear(Units *units);
 
