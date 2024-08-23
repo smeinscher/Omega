@@ -33,6 +33,7 @@ typedef enum BattleResult
 {
     NO_UNITS_DESTROYED,
     DEFENDER_DESTROYED,
+    DEFENDER_CAPTURED,
     ATTACKER_DESTROYED,
     BOTH_DESTROYED
 } BattleResult;
@@ -152,7 +153,7 @@ void unit_occupy_new_tile(Units *units, int unit_index, int previous_x, int prev
 void unit_add_movement_animation(Units *units, int unit_index, int start_x, int start_y, int end_x, int end_y,
                                  int move_type);
 
-bool unit_animate_movement(Units *units);
+bool unit_animate_movement(Units *units, float increment);
 
 bool unit_doing_action(Units *units, int unit_index, UnitAction action);
 

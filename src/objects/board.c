@@ -505,8 +505,8 @@ void board_handle_tile_click(Board *board)
             {
                 unit_add_movement_animation(board->units, unit_index, board->selected_tile_index_x,
                                             board->selected_tile_index_y, move_x, move_y, REGULAR);
-                unit_occupy_new_tile(board->units, unit_index, board->selected_tile_index_x,
-                                     board->selected_tile_index_y, move_x, move_y, board->board_dimension_x);
+                // unit_occupy_new_tile(board->units, unit_index, board->selected_tile_index_x,
+                // board->selected_tile_index_y, move_x, move_y, board->board_dimension_x);
                 unit_cancel_action(board->units, unit_index);
                 /*
                                 unit_move(board->units, unit_index, board->selected_tile_index_x,
@@ -816,6 +816,7 @@ void board_update_highlighted_path_fill_vertices(Board *board)
         }
     }
 }
+
 void board_update_border(Board *board)
 {
     int dimension_x = board->board_dimension_x;
@@ -940,70 +941,38 @@ void board_process_planet_orbit(Board *board)
 
 BattleResult board_process_attack(Board *board, int defender_index, int attacker_index)
 {
-    int start_x = board->units->unit_indices[attacker_index * 2];
-    int start_y = board->units->unit_indices[attacker_index * 2 + 1];
     int move_x = board->units->unit_indices[defender_index * 2];
     int move_y = board->units->unit_indices[defender_index * 2 + 1];
     switch (unit_attack(board->units, defender_index, attacker_index))
     {
     case NO_UNITS_DESTROYED: {
-        /*DynamicIntArray *da = hex_grid_find_path(board, start_x, start_y, move_x, move_y, board->board_dimension_x,
-                                                 board->board_dimension_y);
-        if (da == NULL)
-        {
-            printf("ruh row\n");
-            break;
-        }
-        //        unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, ATTACK);
-        if (da->used >= 2)
-        {
-            unit_add_movement_animation(board->units, attacker_index, move_x, move_y, da->array[0], da->array[1],
-                                        RETREAT);
-            unit_occupy_new_tile(board->units, attacker_index, start_x, start_y, da->array[0], da->array[1],
-                                 board->board_dimension_x);
-        }
-        else
-        {
-            unit_add_movement_animation(board->units, attacker_index, move_x, move_y, start_x, start_y, RETREAT);
-        }
-        da_int_free(da);
-        free(da);
-         */
         return NO_UNITS_DESTROYED;
     }
+    case DEFENDER_CAPTURED:
     case DEFENDER_DESTROYED: {
         if (board->units->unit_type[defender_index] != STATION)
         {
             unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
-            //            da_int_push_back(&board->units->unit_remove_list, defender_index);
-            //            unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y,
-            //            INVADE); unit_occupy_new_tile(board->units, attacker_index, start_x, start_y, move_x, move_y,
-            //                                 board->board_dimension_x);
+            return DEFENDER_DESTROYED;
         }
-        else
-        {
-            board->units->unit_owner[defender_index] = board->units->unit_owner[attacker_index];
-            board->units->unit_health[defender_index] = 0.0f;
-            unit_update_color(board->units, defender_index);
-            unit_claim_territory(board->units, defender_index, move_x, move_y, board->board_dimension_x,
-                                 board->board_dimension_y);
-            board->board_update_flags |= BOARD_UPDATE_BORDERS;
-        }
-        return DEFENDER_DESTROYED;
+        board->units->unit_owner[defender_index] = board->units->unit_owner[attacker_index];
+        board->units->unit_health[defender_index] = 0.0f;
+        unit_update_color(board->units, defender_index);
+        unit_claim_territory(board->units, defender_index, move_x, move_y, board->board_dimension_x,
+                             board->board_dimension_y);
+        board->units->unit_update_flags |= UNIT_UPDATE_HEALTH;
+        board->board_update_flags |= BOARD_UPDATE_BORDERS;
+        return DEFENDER_CAPTURED;
     }
     case ATTACKER_DESTROYED: {
         unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
                     board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
-        //        da_int_push_back(&board->units->unit_remove_list, attacker_index);
         return ATTACKER_DESTROYED;
     }
     case BOTH_DESTROYED: {
         unit_remove(board->units, defender_index, move_x, move_y, board->board_dimension_x);
         unit_remove(board->units, attacker_index, board->units->unit_indices[attacker_index * 2],
                     board->units->unit_indices[attacker_index * 2 + 1], board->board_dimension_x);
-        // unit_add_movement_animation(board->units, attacker_index, start_x, start_y, move_x, move_y, INVADE);
-        //         da_int_push_back(&board->units->unit_remove_list, defender_index);
-        //         da_int_push_back(&board->units->unit_remove_list, attacker_index);
         return BOTH_DESTROYED;
     }
     }
